@@ -1,0 +1,16 @@
+name: frgfp-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - cmake>=3.20
+  - ninja           
+  - cxx-compiler   
+  - eigen  
+  - pybind11
+  - numpy
+  - pytest
+  - pip
+  - pip:
+      - scikit-build-core

@@ -1,0 +1,39 @@
+# ==========================================
+# Custom directories
+# ==========================================
+sandbox/
+
+# ==========================================
+# C++ and Build Systems (CMake, scikit-build)
+# ==========================================
+build/
+.skbuild/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+compile_commands.json
+
+# ==========================================
+# Python Runtime and Caches
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# ==========================================
+# Python Packaging and Testing
+# ==========================================
+*.egg-info/
+dist/
+.pytest_cache/
+.coverage
+
+# ==========================================
+# IDEs and OS files
+# ==========================================
+.vscode/
+.idea/
+.DS_Store
