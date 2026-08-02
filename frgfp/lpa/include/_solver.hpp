@@ -6,12 +6,14 @@
 
 namespace frgfp {
 namespace lpa {
+    
 struct OptimizeResult {
     Eigen::VectorXd coeffs;
     bool success;
     int iterations;
     double error;
 };
+
 typedef void (*FlowRhsFunc)(
     const double* I, const double* V, const double* dV, const double* ddV, 
     const double* params, double* rhs_out, int n_points, int inv_dim
@@ -40,8 +42,9 @@ public:
         const Eigen::VectorXd& flow_params);
 
 private:
-    Eigen::MatrixXd coll_grid_;
+    Eigen::MatrixXd coll_grid_; 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> coll_grid_rm_;
+    
     std::shared_ptr<core::Ansatz> ansatz_;
     FlowRhsFunc flowrhs_c_func_;
     int inv_dim_;

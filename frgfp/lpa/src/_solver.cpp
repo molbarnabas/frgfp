@@ -2,6 +2,7 @@
 #include <omp.h>
 #include <cmath>
 #include <algorithm>
+#include <stdexcept>
 
 namespace frgfp {
 namespace lpa {
@@ -18,6 +19,14 @@ LPACollSolver_cpp::LPACollSolver_cpp(const Eigen::MatrixXd& coll_grid,
 
     M_val_ = ansatz_->evaluate_basis(coll_grid_);
     int n_coeffs = M_val_.cols();
+
+    if (n_points_ < n_coeffs) {
+        throw std::invalid_argument(
+            "Hiba: A kollokacios pontok szama (" + std::to_string(n_points_) + 
+            ") kisebb, mint az egyutthatok szama (" + std::to_string(n_coeffs) + 
+            ")! A rendszer alulhatarozott."
+        );
+    }
 
     auto grad_vec = ansatz_->evaluate_basis_grad(coll_grid_);
     M_grad_.resize(n_points_ * inv_dim_, n_coeffs);
@@ -50,13 +59,11 @@ OptimizeResult LPACollSolver_cpp::local_optimize(const Eigen::VectorXd& init_coe
     
     int max_threads = multithread ? omp_get_max_threads() : 1;
     
-    // --- Közös Bázis Munkaterület (O(N^2) mátrixszorzás csak 1x per iteráció) ---
     Eigen::VectorXd V_base(n_points_);
     Eigen::VectorXd dV_base(n_points_ * inv_dim_);
     Eigen::VectorXd ddV_base(n_points_ * inv_dim_ * inv_dim_);
     Eigen::VectorXd r_base(n_points_);
     
-    // --- Szálankénti munkaterület (Thread-Local Storage) ---
     std::vector<Eigen::VectorXd> V_ws(max_threads, Eigen::VectorXd(n_points_));
     std::vector<Eigen::VectorXd> dV_ws(max_threads, Eigen::VectorXd(n_points_ * inv_dim_));
     std::vector<Eigen::VectorXd> ddV_ws(max_threads, Eigen::VectorXd(n_points_ * inv_dim_ * inv_dim_));
@@ -70,53 +77,51 @@ OptimizeResult LPACollSolver_cpp::local_optimize(const Eigen::VectorXd& init_coe
     double err = 1e9;
     
     while (iter < maxiter) {
-        // 1. LÉPÉS: A Bázispont Kiszámítása
         V_base.noalias()   = M_val_ * x;
         dV_base.noalias()  = M_grad_ * x;
         ddV_base.noalias() = M_hess_ * x;
 
         flowrhs_c_func_(
-            coll_grid_.data(), V_base.data(), dV_base.data(), ddV_base.data(),
+            coll_grid_rm_.data(), V_base.data(), dV_base.data(), ddV_base.data(),
             flow_params.data(), rhs_ws[0].data(), n_points_, inv_dim_
         );
-        r_base.noalias() = rhs_ws[0] - V_base; 
+        
+        r_base.noalias() = rhs_ws[0]; 
         
         err = r_base.norm();
         if (err <= tol) break;
         
-        // 2. LÉPÉS: Jacobi mátrix építés MÁTRIXSZORZÁS NÉLKÜL (O(N) Oszlop-eltolás trükk)
         #pragma omp parallel for if(multithread)
         for (int j = 0; j < n_coeffs; ++j) {
             int tid = multithread ? omp_get_thread_num() : 0;
             double eps = 1e-6 * std::max(1.0, std::abs(x(j))); 
 
-            // R_PLUS:
             V_ws[tid].noalias()   = V_base + eps * M_val_.col(j);
             dV_ws[tid].noalias()  = dV_base + eps * M_grad_.col(j);
             ddV_ws[tid].noalias() = ddV_base + eps * M_hess_.col(j);
 
             flowrhs_c_func_(
-                coll_grid_.data(), V_ws[tid].data(), dV_ws[tid].data(), ddV_ws[tid].data(),
+                coll_grid_rm_.data(), V_ws[tid].data(), dV_ws[tid].data(), ddV_ws[tid].data(),
                 flow_params.data(), rhs_ws[tid].data(), n_points_, inv_dim_
             );
-            r_plus_ws[tid].noalias() = rhs_ws[tid] - V_ws[tid];
+            
+            r_plus_ws[tid].noalias() = rhs_ws[tid];
 
-            // R_MINUS:
             V_ws[tid].noalias()   = V_base - eps * M_val_.col(j);
             dV_ws[tid].noalias()  = dV_base - eps * M_grad_.col(j);
             ddV_ws[tid].noalias() = ddV_base - eps * M_hess_.col(j);
 
             flowrhs_c_func_(
-                coll_grid_.data(), V_ws[tid].data(), dV_ws[tid].data(), ddV_ws[tid].data(),
+                coll_grid_rm_.data(), V_ws[tid].data(), dV_ws[tid].data(), ddV_ws[tid].data(),
                 flow_params.data(), rhs_ws[tid].data(), n_points_, inv_dim_
             );
-            r_minus_ws[tid].noalias() = rhs_ws[tid] - V_ws[tid];
+            
+            r_minus_ws[tid].noalias() = rhs_ws[tid];
 
             J.col(j).noalias() = (r_plus_ws[tid] - r_minus_ws[tid]) / (2.0 * eps);
         }
         
-        // 3. LÉPÉS: BDC-SVD
-        Eigen::VectorXd dx = J.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(-r_base);
+        Eigen::VectorXd dx = J.bdcSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(-r_base);
         x += dx;
         iter++;
     }
@@ -161,6 +166,7 @@ std::vector<OptimizeResult> LPACollSolver_cpp::multistart_optimize(
 
     #pragma omp parallel for
     for (int i = 0; i < n_starts; ++i) {
+        // Nested threading kikapcsolva a külső párhuzamosításhoz
         results[i] = local_optimize(init_coeffs_list[i], maxiter, tol, flow_params, false);
     }
     
