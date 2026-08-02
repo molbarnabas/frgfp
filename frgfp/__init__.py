@@ -42,3 +42,7 @@ __all__ = [
     "chebyshev_collgrid",
     "FuncFromAnsatz",
 ]
+
+from . import lpa
+
+__all__ = ["lpa"]

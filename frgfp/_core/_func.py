@@ -142,3 +142,30 @@ class FuncFromAnsatz(_core_cpp.FuncFromAnsatz):
             shape `(N_points,)` representing the evaluated Hessian components.
         """
         return super().evaluate_hess(grid)
+
+    def evaluate_rhs(self, grid, inv_dim,flowrhs_func, flow_params: Union[List[float], np.ndarray, tuple]) -> np.ndarray:
+        """
+        Evaluates the right-hand side of the flow equation on the given grid.
+
+        This method computes the flow equation's right-hand side using the current 
+        functional expansion, its derivatives, and the provided flow parameters.
+
+        Parameters
+        ----------
+        grid : np.ndarray
+            A 2D array of shape `(N_points, inv_dim)` containing the grid coordinates.
+        flow_params : list or np.ndarray or tuple
+            A 1D array of parameters required by the flowrhs_func.
+        flowrhs_func : callable
+            A user-defined function that computes the right-hand side of the flow 
+            equation. It should accept arguments `(I, V, dV, ddV, params)`.
+
+        Returns
+        -------
+        np.ndarray
+            A 1D array of shape `(N_points,)` with the evaluated right-hand side values.
+        """
+        if inv_dim==1:
+            return flowrhs_func(grid, self.evaluate(grid), self.evaluate_grad(grid)[0], self.evaluate_hess(grid)[0], flow_params)
+        else:
+            return flowrhs_func(grid, self.evaluate(grid), self.evaluate_grad(grid), self.evaluate_hess(grid), flow_params)
