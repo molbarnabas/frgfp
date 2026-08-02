@@ -10,6 +10,7 @@ dependencies:
   - eigen  
   - pybind11
   - numpy
+  - numba
   - pytest
   - pip
   - pip:

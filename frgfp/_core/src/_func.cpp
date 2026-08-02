@@ -46,7 +46,7 @@ std::vector<Eigen::VectorXd> FuncFromAnsatz::evaluate_hess(const Eigen::MatrixXd
 Eigen::VectorXd fit_coeffs_from_grid(std::shared_ptr<Ansatz> ansatz, const Eigen::MatrixXd& grid, const Eigen::VectorXd& vals) {
     Eigen::MatrixXd M = ansatz->evaluate_basis(grid);
     
-    return M.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(vals);
+    return M.bdcSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(vals);
 }
 
 } // namespace core

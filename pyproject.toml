@@ -9,7 +9,7 @@ description = "Functional Renormalization Group Fixed Point solver"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "numpy>=1.20.0"
+    "numpy>=1.20.0", "numba>=0.55.0"
 ]
 
 [project.optional-dependencies]
