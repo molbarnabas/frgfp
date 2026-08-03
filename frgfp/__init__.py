@@ -18,6 +18,11 @@ core
     generators, and function evaluators powered by the C++ backend. 
     (Internal components are wrapped and exposed directly in this namespace 
     for convenience).
+lpa
+    This module provides a high-performance collocation solver for finding the 
+    fixed points of Functional Renormalization Group (FRG) flow equations.
+    It bridges a user-defined Python flow equation with an optimized C++ 
+    Newton-Gauss backend using zero-overhead Numba C-callbacks.
 
 Notes
 -----
