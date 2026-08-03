@@ -114,6 +114,7 @@ def test_local_optimize_1d(setup_1d):
     ansatz, grid = setup_1d
     solver = LPACollSolver(grid, ansatz, dummy_1d_flow, inv_dim=1, param_dim=1)
     
+    # Constant initial guess 0.05
     init_coeffs = np.full(ansatz.num_coeffs, 0.05)
     flow_params = np.array([2.5]) # p = 2.5
     
@@ -137,6 +138,7 @@ def test_local_optimize_2d_multithread(setup_2d):
     ansatz, grid = setup_2d
     solver = LPACollSolver(grid, ansatz, dummy_2d_flow, inv_dim=2, param_dim=1)
     
+    # Constant initial guess 0.05
     init_coeffs = np.full(ansatz.num_coeffs, 0.05)
     flow_params = np.array([1.0]) # p = 1.0
     
@@ -164,6 +166,7 @@ def test_param_path_following(setup_1d):
     ansatz, grid = setup_1d
     solver = LPACollSolver(grid, ansatz, dummy_1d_flow, inv_dim=1, param_dim=1)
     
+    # Constant initial guess 0.05
     init_coeffs = np.full(ansatz.num_coeffs, 0.05)
     # Parameter trajectory: 1.0 -> 2.0 -> 3.0
     flow_params_path = [np.array([1.0]), np.array([2.0]), np.array([3.0])]
@@ -190,7 +193,7 @@ def test_multistart_optimize(setup_1d):
     ansatz, grid = setup_1d
     solver = LPACollSolver(grid, ansatz, dummy_1d_flow, inv_dim=1, param_dim=1)
     
-    # Three completely random starting points
+    # Three initial guesses all equal to the constant 0.05
     init_coeffs_list = [
         np.full(ansatz.num_coeffs, 0.05),
         np.full(ansatz.num_coeffs, 0.05),
