@@ -1,3 +1,5 @@
+![frgfp logo](frgfp_logo.png)
+
 # frgfp
 
 Functional Renormalization Group Fixed Point (frgfp) Solver.
