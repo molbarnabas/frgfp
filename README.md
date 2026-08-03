@@ -1,5 +1,5 @@
 <div style="display: flex; align-items: center; gap: 15px;">
-  <img src="frgfp_logo.png" alt="frgfp logo" width="120" style="flex-shrink: 0;">
+  <img src="frgfp_logo.png" alt="frgfp logo" width="150" style="flex-shrink: 0;">
   <h1>frgfp</h1>
 </div>
 
