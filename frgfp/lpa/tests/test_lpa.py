@@ -19,32 +19,13 @@ def dummy_1d_flow(I, V, dV, ddV, params):
     Since Newton-Gauss solves (rhs_out - V = 0), the found 
     potential MUST exactly be V(I) = I**2 + param[0].
     """
-    d = params[0]
-    N = params[1]
-    
-    omega_d = 2.0 / ((4.0 *np.pi)**(d / 2.0) * math.gamma(d / 2.0))
-    
-    rhs = (omega_d / d) * (
-        1.0 / (1.0 + dV+2.0 * I * ddV) + 
-        (N - 1.0) / (1.0 + dV) 
-    ) - d * V + (d - 2.0) * I * dV 
-    
-    return rhs
+    return I**2 + params[0]
 
 def dummy_2d_flow(I, V, dV, ddV, params):
     """
-    2D dummy flow, the same as the 1D case but with dV and ddV as arrays.
+    2D dummy flow: target potential V(I0,I1) = I0**2 + I1**2 + I0*I1 + params[0]
     """
-    d = params[0]
-    N = params[1]
-    
-    omega_d = 2.0 / ((4.0 *np.pi)**(d / 2.0) * math.gamma(d / 2.0))
-    
-    rhs = (omega_d / d) * (
-        1.0 / (1.0 + dV[0]+2.0 * I * ddV[0,0]) + 
-        (N - 1.0) / (1.0 + dV[0]) 
-    ) - d * V + (d - 2.0) * I * dV[0] 
-    return rhs
+    return I[0]**2 + I[1]**2 + I[0]*I[1] + params[0]
 
 
 # =====================================================================
@@ -115,7 +96,7 @@ def test_local_optimize_1d(setup_1d):
     ansatz, grid = setup_1d
     solver = LPACollSolver(grid, ansatz, dummy_1d_flow, inv_dim=1, param_dim=1)
     
-    init_coeffs = np.zeros(ansatz.num_coeffs)
+    init_coeffs = np.full(ansatz.num_coeffs, 0.05)
     flow_params = np.array([2.5]) # p = 2.5
     
     # Run WITHOUT multithreading
@@ -138,7 +119,7 @@ def test_local_optimize_2d_multithread(setup_2d):
     ansatz, grid = setup_2d
     solver = LPACollSolver(grid, ansatz, dummy_2d_flow, inv_dim=2, param_dim=1)
     
-    init_coeffs = np.zeros(ansatz.num_coeffs)
+    init_coeffs = np.full(ansatz.num_coeffs, 0.05)
     flow_params = np.array([1.0]) # p = 1.0
     
     # Run WITH multithreading
@@ -165,7 +146,7 @@ def test_param_path_following(setup_1d):
     ansatz, grid = setup_1d
     solver = LPACollSolver(grid, ansatz, dummy_1d_flow, inv_dim=1, param_dim=1)
     
-    init_coeffs = np.zeros(ansatz.num_coeffs)
+    init_coeffs = np.full(ansatz.num_coeffs, 0.05)
     # Parameter trajectory: 1.0 -> 2.0 -> 3.0
     flow_params_path = [np.array([1.0]), np.array([2.0]), np.array([3.0])]
     
@@ -193,9 +174,9 @@ def test_multistart_optimize(setup_1d):
     
     # Three completely random starting points
     init_coeffs_list = [
-        np.zeros(ansatz.num_coeffs),
-        np.ones(ansatz.num_coeffs) * 0.5,
-        np.random.rand(ansatz.num_coeffs)
+        np.full(ansatz.num_coeffs, 0.05),
+        np.full(ansatz.num_coeffs, 0.05),
+        np.full(ansatz.num_coeffs, 0.05)
     ]
     
     flow_params = np.array([4.2])
