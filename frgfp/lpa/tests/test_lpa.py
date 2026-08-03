@@ -15,17 +15,35 @@ from frgfp.lpa import LPACollSolver
 
 def dummy_1d_flow(I, V, dV, ddV, params):
     """
-    1D test equation: rhs_out = I**2 + param[0]
-    Since Newton-Gauss solves (rhs_out - V = 0), the found 
-    potential MUST exactly be V(I) = I**2 + param[0].
+    1D test equation
     """
-    return I**2 + params[0]
+    d = params[0]
+    N = params[1]
+    
+    omega_d = 2.0 / ((4.0 * math.pi)**(d / 2.0) * math.gamma(d / 2.0))
+    
+    rhs = (omega_d / d) * (
+        1.0 / (1.0 + dV+2.0 * I * ddV) + 
+        (N - 1.0) / (1.0 + dV) 
+    ) - d * V + (d - 2.0) * I * dV 
+    
+    return rhs
 
 def dummy_2d_flow(I, V, dV, ddV, params):
     """
-    2D dummy flow: target potential V(I0,I1) = I0**2 + I1**2 + I0*I1 + params[0]
+    2D dummy flow
     """
-    return I[0]**2 + I[1]**2 + I[0]*I[1] + params[0]
+    d = params[0]
+    N = params[1]
+    
+    omega_d = 2.0 / ((4.0 * math.pi)**(d / 2.0) * math.gamma(d / 2.0))
+    
+    rhs = (omega_d / d) * (
+        1.0 / (1.0 + dV[0]+2.0 * I * ddV[0,0]) + 
+        (N - 1.0) / (1.0 + dV[0]) 
+    ) - d * V + (d - 2.0) * I * dV[0] 
+    
+    return rhs
 
 
 # =====================================================================
