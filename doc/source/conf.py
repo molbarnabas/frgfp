@@ -28,6 +28,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
+    'pydata_sphinx_theme',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -52,8 +53,39 @@ language = 'en'
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
+html_theme = 'pydata_sphinx_theme'
 html_static_path = ['_static']
+
+# Theme options
+html_theme_options = {
+    "logo": {
+        "text": "frgfp",
+        "image_light": "_static/logo.png",
+        "image_dark": "_static/logo.png",
+    },
+    "navbar_start": ["navbar-logo"],
+    "navbar_center": ["navbar-nav"],
+    "navbar_end": ["navbar-icon-links"],
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/yourusername/frgfp",
+            "icon": "fab fa-github",
+            "type": "fontawesome",
+        },
+    ],
+    "show_toc_level": 2,
+    "navigation_with_keys": True,
+    "collapse_navigation": True,
+    "navigation_depth": 4,
+    "show_nav_level": 2,
+    "use_edit_page_button": True,
+    "show_prev_next": True,
+    "search_bar_text": "Search the docs...",
+    "footer_start": ["copyright"],
+    "footer_center": ["sphinx-version"],
+    "footer_end": ["theme-version"],
+}
 
 # -- Options for autodoc -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
