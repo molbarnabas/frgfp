@@ -6,12 +6,23 @@
 frgfp documentation
 ===================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+**frgfp** is a Python package for functional renormalization group (FRG) calculations using collocation methods. It provides efficient implementations of Chebyshev and polynomial ansätze, along with solvers for LPA flow equations.
 
+This documentation provides an overview of the package, installation instructions, usage examples, and a complete API reference.
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
+   installation
+   usage
+   api
+   contributing
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
