@@ -1,6 +1,7 @@
-<img src="frgfp_logo.png" alt="frgfp logo" width="80" align="left" style="margin-right: 10px;">
-
-# frgfp
+<div style="display: flex; align-items: center; gap: 15px;">
+  <img src="frgfp_logo.png" alt="frgfp logo" width="120" style="flex-shrink: 0;">
+  <h1>frgfp</h1>
+</div>
 
 Functional Renormalization Group Fixed Point (frgfp) Solver.
 
