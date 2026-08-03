@@ -1,4 +1,4 @@
-![frgfp logo](frgfp_logo.png)
+<img src="frgfp_logo.png" alt="frgfp logo" width="80" align="left" style="margin-right: 10px;">
 
 # frgfp
 
