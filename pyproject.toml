@@ -13,8 +13,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
-    "pytest>=7.0.0"
+dev = [
+    "pytest>=7.0.0",
+    "sphinx",
+    "pydata-sphinx-theme",
+    "numpydoc"
 ]
 
 [tool.scikit-build]

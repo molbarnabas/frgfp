@@ -12,6 +12,9 @@ dependencies:
   - numpy
   - numba
   - pytest
+  - sphinx
+  - pydata-sphinx-theme
+  - numpydoc
   - pip
   - pip:
       - scikit-build-core
