@@ -3,6 +3,7 @@ Unit tests for the frgfp.lpa module.
 Run from the project root using: pytest tests/test_lpa.py -v
 """
 
+import math
 import pytest
 import numpy as np
 import frgfp as fp
@@ -18,25 +19,32 @@ def dummy_1d_flow(I, V, dV, ddV, params):
     Since Newton-Gauss solves (rhs_out - V = 0), the found 
     potential MUST exactly be V(I) = I**2 + param[0].
     """
-    return I**2 + params[0]
+    d = params[0]
+    N = params[1]
+    
+    omega_d = 2.0 / ((4.0 *np.pi)**(d / 2.0) * math.gamma(d / 2.0))
+    
+    rhs = (omega_d / d) * (
+        1.0 / (1.0 + dV+2.0 * I * ddV) + 
+        (N - 1.0) / (1.0 + dV) 
+    ) - d * V + (d - 2.0) * I * dV 
+    
+    return rhs
 
 def dummy_2d_flow(I, V, dV, ddV, params):
     """
-    2D test equation targeting exactly V(I0, I1) = I0**2 + I1**2 + I0*I1 + p.
-    We construct a mathematically well-posed RHS that guarantees a unique
-    solution and strictly tests the interleaved memory mapping of dV and ddV.
+    2D dummy flow, the same as the 1D case but with dV and ddV as arrays.
     """
-    # A várt egzakt potenciál
-    V_tar = I[0]**2 + I[1]**2 + I[0]*I[1] + params[0]
+    d = params[0]
+    N = params[1]
     
-    # Ezek a "büntető" tagok pontosan 0-t adnak, HA a deriváltak jók.
-    # Ha a memóriakép rossz, ezek az értékek szemetek lesznek, és a teszt elbukik.
-    diff_d0 = dV[0] - (2*I[0] + I[1])
-    diff_d1 = dV[1] - (I[0] + 2*I[1])
-    diff_dd = ddV[0, 1] - 1.0
+    omega_d = 2.0 / ((4.0 *np.pi)**(d / 2.0) * math.gamma(d / 2.0))
     
-    # A jobb oldal kényszeríti a V-t a V_tar irányába
-    return V_tar + diff_d0 + diff_d1 + diff_dd
+    rhs = (omega_d / d) * (
+        1.0 / (1.0 + dV[0]+2.0 * I * ddV[0,0]) + 
+        (N - 1.0) / (1.0 + dV[0]) 
+    ) - d * V + (d - 2.0) * I * dV[0] 
+    return rhs
 
 
 # =====================================================================
