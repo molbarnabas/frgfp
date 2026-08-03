@@ -1,7 +1,9 @@
 frgfp._core
 ===========
 
-.. automodule:: frgfp._core
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
+   :maxdepth: 1
+
+   frgfp._core.ChebyshevAnsatz
+   frgfp._core.PolyAnsatz
+   frgfp._core.FuncFromAnsatz

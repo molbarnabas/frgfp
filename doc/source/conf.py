@@ -58,11 +58,6 @@ html_static_path = ['_static']
 
 # Theme options
 html_theme_options = {
-    "logo": {
-        "text": "frgfp",
-        "image_light": "_static/logo.png",
-        "image_dark": "_static/logo.png",
-    },
     "navbar_start": ["navbar-logo"],
     "navbar_center": ["navbar-nav"],
     "navbar_end": ["navbar-icon-links"],
@@ -79,12 +74,17 @@ html_theme_options = {
     "collapse_navigation": True,
     "navigation_depth": 4,
     "show_nav_level": 2,
-    "use_edit_page_button": True,
     "show_prev_next": True,
     "search_bar_text": "Search the docs...",
     "footer_start": ["copyright"],
     "footer_center": ["sphinx-version"],
     "footer_end": ["theme-version"],
+}
+
+html_context = {
+    "github_user": "yourusername",
+    "github_repo": "frgfp",
+    "github_version": "main",
 }
 
 # -- Options for autodoc -----------------------------------------------------
