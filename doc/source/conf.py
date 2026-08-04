@@ -125,3 +125,4 @@ intersphinx_mapping = {
 # https://www.sphinx-doc.org/en/master/usage/extensions/autosummary.html
 
 autosummary_generate = True
+autosummary_generate_overwrite = True

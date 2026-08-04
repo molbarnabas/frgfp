@@ -18,3 +18,14 @@ Development Setup
    cd frgfp
    pip install -e .[dev]
    pytest
+
+Documentation Structure
+-----------------------
+
+The documentation is organized as follows:
+
+* ``doc/source/installation.rst`` - Installation instructions
+* ``doc/source/usage.rst`` - Usage guide with examples
+* ``doc/source/api.rst`` - API reference
+* ``doc/source/reference/`` - Auto-generated API documentation
+* ``doc/source/contributing.rst`` - Contribution guidelines
