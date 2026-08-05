@@ -12,6 +12,7 @@ dependencies:
   - numpy
   - numba
   - pytest
+  - pytest-benchmark
   - sphinx
   - pydata-sphinx-theme
   - numpydoc
