@@ -15,7 +15,7 @@ from frgfp.lpa import LPACollSolver
 
 def O_N_gaussian_flow_1d(I, V, dV, ddV, params):
     """
-    1D Gaussian limit of the O(N) Wilson-Fisher flow[cite: 5].
+    1D Gaussian limit of the O(N) Wilson-Fisher flow.
     By explicitly ignoring dV and ddV, the flow becomes purely potential-driven.
     The exact fixed point is a constant: V = (omega_d * N) / d^2.
     """
@@ -24,7 +24,7 @@ def O_N_gaussian_flow_1d(I, V, dV, ddV, params):
     
     omega_d = 2.0 / ((4.0 * math.pi)**(d / 2.0) * math.gamma(d / 2.0))
     
-    # RHS with dV=0 and ddV=0[cite: 5]
+    # RHS with dV=0 and ddV=0
     rhs = (omega_d / d) * N - d * V
     return rhs
 

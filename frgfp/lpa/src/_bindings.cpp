@@ -15,13 +15,20 @@ PYBIND11_MODULE(_lpa_cpp, m) {
         .def_readonly("error", &frgfp::lpa::OptimizeResult::error);
 
     py::class_<frgfp::lpa::LPACollSolver_cpp>(m, "LPACollSolver_cpp")
-        .def(py::init<const Eigen::MatrixXd&, std::shared_ptr<frgfp::core::Ansatz>, size_t, int, int>())
+        .def(py::init<const Eigen::MatrixXd&, std::shared_ptr<frgfp::core::Ansatz>, size_t, size_t, int, int>())
         .def("local_optimize", &frgfp::lpa::LPACollSolver_cpp::local_optimize,
+             py::call_guard<py::gil_scoped_release>(),
              py::arg("init_coeffs"), py::arg("maxiter"), py::arg("tol"), 
              py::arg("flow_params"), py::arg("multithread") = false)
+        .def("local_optimize_fixed_iterations", &frgfp::lpa::LPACollSolver_cpp::local_optimize_fixed_iterations,
+             py::call_guard<py::gil_scoped_release>(),
+             py::arg("init_coeffs"), py::arg("num_iter"), py::arg("flow_params"),
+             py::arg("multithread") = false)
         .def("param_path_following", &frgfp::lpa::LPACollSolver_cpp::param_path_following,
+             py::call_guard<py::gil_scoped_release>(),
              py::arg("init_coeffs"), py::arg("maxiter"), py::arg("tol"), 
              py::arg("flow_params_path"), py::arg("multithread") = true)
         .def("multistart_optimize", &frgfp::lpa::LPACollSolver_cpp::multistart_optimize,
+             py::call_guard<py::gil_scoped_release>(),
              py::arg("init_coeffs_list"), py::arg("maxiter"), py::arg("tol"), py::arg("flow_params"));
 }

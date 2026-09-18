@@ -1,3 +1,11 @@
+"""
+Functional expansion built from an ansatz and a coefficient vector.
+
+This module exposes ``FuncFromAnsatz``, which pairs an instantiated ansatz with
+its expansion coefficients and evaluates the function, its gradient, and its
+Hessian on collocation grids via the ``_core_cpp`` Eigen backend.
+"""
+
 import numpy as np
 from typing import Union, List
 from . import _core_cpp
@@ -20,6 +28,23 @@ class FuncFromAnsatz(_core_cpp.FuncFromAnsatz):
         number of basis functions defined in the ansatz.
     """
     def __init__(self, ansatz: _core_cpp.Ansatz, coeffs: Union[List[float], np.ndarray]):
+        """
+        Initialize the functional expansion.
+
+        Parameters
+        ----------
+        ansatz : _core_cpp.Ansatz
+            The instantiated basis expansion defining the functional space.
+        coeffs : list of float or np.ndarray
+            A 1D array of coefficients whose length matches ``ansatz.num_coeffs``.
+
+        Raises
+        ------
+        TypeError
+            If ``ansatz`` is not a valid Ansatz instance.
+        ValueError
+            If the coefficient count does not match ``ansatz.num_coeffs``.
+        """
         if not isinstance(ansatz, _core_cpp.Ansatz):
             raise TypeError("The 'ansatz' parameter must be a valid instantiated Ansatz object.")
         
@@ -88,6 +113,14 @@ class FuncFromAnsatz(_core_cpp.FuncFromAnsatz):
 
     @coeffs.setter
     def coeffs(self, new_coeffs: Union[List[float], np.ndarray]):
+        """
+        Update the expansion coefficients in place.
+
+        Parameters
+        ----------
+        new_coeffs : list of float or np.ndarray
+            The new coefficients; their length must match ``num_coeffs``.
+        """
         _core_cpp.FuncFromAnsatz.coeffs.__set__(self, new_coeffs)
 
     def evaluate(self, grid: np.ndarray) -> np.ndarray:

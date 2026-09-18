@@ -1,3 +1,11 @@
+"""
+Polynomial and Chebyshev ansatz definitions for the frgfp core module.
+
+This module exposes the user-facing basis-expansion classes. Their inputs are
+validated and normalized in Python, while the actual basis, gradient, and
+Hessian evaluations are delegated to the optimised ``_core_cpp`` Eigen backend.
+"""
+
 import numpy as np
 from typing import Union, Tuple, List
 from . import _core_cpp
@@ -45,6 +53,19 @@ class ChebyshevAnsatz(_core_cpp.ChebyshevAnsatz):
         standard `[-1, 1]` domain internally.
     """
     def __init__(self, inv_dim: int, order: Union[int, Tuple[int, ...]], interval: Union[Tuple[float, float], Tuple[Tuple[float, float], ...]]):
+        """
+        Initialize a Chebyshev basis expansion.
+
+        Parameters
+        ----------
+        inv_dim : int
+            The number of invariants (dimensions).
+        order : int or tuple of int
+            The maximum polynomial order for each invariant.
+        interval : tuple of float or tuple of tuples of float
+            The physical expansion interval per dimension, mapped internally to
+            the standard ``[-1, 1]`` domain.
+        """
         order = _validate_common_ansatz_inputs(inv_dim, order)
 
         if inv_dim == 1 and isinstance(interval, tuple) and len(interval) == 2 and isinstance(interval[0], (int, float, np.number)):
@@ -148,6 +169,18 @@ class PolyAnsatz(_core_cpp.PolyAnsatz):
         The local expansion point $x_0$ for each invariant. 
     """
     def __init__(self, inv_dim: int, order: Union[int, Tuple[int, ...]], center: Union[float, Tuple[float, ...]]):
+        """
+        Initialize a polynomial (Taylor) basis expansion.
+
+        Parameters
+        ----------
+        inv_dim : int
+            The number of invariants (dimensions).
+        order : int or tuple of int
+            The maximum polynomial order for each invariant.
+        center : float or tuple of float
+            The local expansion point ``x_0`` for each invariant.
+        """
         order = _validate_common_ansatz_inputs(inv_dim, order)
 
         if inv_dim == 1 and isinstance(center, (int, float, np.number)) and not isinstance(center, bool):

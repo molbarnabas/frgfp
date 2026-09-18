@@ -1,8 +1,13 @@
+"""
+Unit tests for the frgfp.core.FuncFromAnsatz expansion class.
+"""
+
 import pytest
 import numpy as np
 import frgfp as fp
 
 def test_func_properties_and_setters():
+    """Check coefficient access, in-place updates, and length validation."""
     ansatz = fp.PolyAnsatz(inv_dim=1, order=2, center=0.0)
     func = fp.FuncFromAnsatz(ansatz, [1.0, 2.0, 3.0])
     
@@ -16,6 +21,7 @@ def test_func_properties_and_setters():
         func.coeffs = [1.0, 2.0]
 
 def test_func_grad_hess_evaluation():
+    """Check value, gradient, and Hessian evaluation against analytic results."""
     ansatz = fp.PolyAnsatz(inv_dim=1, order=3, center=0.0)
     # Function: V(x) = 1 + 2x + 3x^2 + x^3
     coeffs = np.array([1.0, 2.0, 3.0, 1.0])
@@ -37,6 +43,7 @@ def test_func_grad_hess_evaluation():
     np.testing.assert_allclose(hess[0], [6.0, 12.0, 18.0])
 
 def test_func_from_grid_chebyshev_fitting():
+    """Check that from_grid reproduces the target values on the fitting grid."""
     ansatz = fp.ChebyshevAnsatz(inv_dim=1, order=4, interval=(-2.0, 2.0))
     grid = fp.chebyshev_collgrid(1, 10, (-2.0, 2.0))
     
@@ -48,6 +55,7 @@ def test_func_from_grid_chebyshev_fitting():
     np.testing.assert_allclose(reconstructed_vals, target_vals, atol=1e-12)
 
 def test_func_invalid_inputs():
+    """Check that mismatched coefficient/grid shapes raise ValueError."""
     ansatz = fp.PolyAnsatz(inv_dim=2, order=(1, 1), center=(0.0, 0.0))
     with pytest.raises(ValueError):
         fp.FuncFromAnsatz(ansatz, [1.0, 2.0])
