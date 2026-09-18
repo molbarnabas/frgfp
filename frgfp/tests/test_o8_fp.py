@@ -39,8 +39,9 @@ def high_perturb(rho):
     return -0.341419*rho + 0.876914*rho**2 + 1.45014*rho**3 + 1.5513*rho**4 - \
            0.167052*rho**5 - 1.55923*rho**6 + 10.488*rho**7 + 37.6868*rho**8 + 0.0683767
 
-def run_o8(multithread):
-    """Find the O(8) fixed point with the requested threading mode."""
+@pytest.fixture(scope="module")
+def o8_solver_and_guess():
+    """Build the O(8) ansatz, solver and initial guess once (outside the timed region)."""
     ansatz = fp.PolyAnsatz(inv_dim=1, order=100, center=0.15)
     coll_grid = fp.uniform_collgrid(inv_dim=1, num_points=101, interval=(0, 0.4))
     
@@ -58,21 +59,26 @@ def run_o8(multithread):
         vals=high_perturb(coll_grid)+5  # Adding noise
     )
     
-    return solver.local_optimize(
-        init_coeffs=fit_poly.coeffs, 
-        flow_params=(3.0, 8.0), 
-        maxiter=10000, 
-        tol=1e-7, 
-        multithread=multithread
-    )
+    return solver, fit_poly.coeffs
 
 @pytest.mark.parametrize("multithread", [False, True])
-def test_o8_fixed_point_benchmark(benchmark, multithread):
+def test_o8_fixed_point_benchmark(benchmark, o8_solver_and_guess, multithread):
     """
-    Benchmark the O(8) fixed-point solve for each threading mode, and check the
-    leading coefficients against ``o8_fp.dat`` within a relative tolerance.
+    Benchmark only the O(8) fixed-point optimization (the solver and initial
+    guess are built by the fixture, outside the timed region) for each threading
+    mode, and check the leading coefficients against ``o8_fp.dat`` within a
+    relative tolerance.
     """
-    result = benchmark(run_o8, multithread)
+    solver, init_coeffs = o8_solver_and_guess
+    
+    result = benchmark(
+        solver.local_optimize,
+        init_coeffs,
+        flow_params=(3.0, 8.0),
+        maxiter=10000,
+        tol=1e-7,
+        multithread=multithread
+    )
     
     assert result is not None, (
         f"Test failed: multithread={multithread} did not converge."

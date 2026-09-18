@@ -196,8 +196,8 @@ def _build_callbacks(flowrhs_func, inv_dim, param_dim):
     -------
     (scalar_address, batch_address) : tuple of int
         Addresses of the scalar and batched C-callbacks. ``batch_address`` is 0
-        when the batched path is unavailable (``inv_dim != 1`` or no usable
-        parallel runtime).
+        when the batched path is unavailable (``inv_dim != 1`` or the kernel
+        failed to compile).
 
     Raises
     ------
@@ -228,7 +228,7 @@ def _build_callbacks(flowrhs_func, inv_dim, param_dim):
         except Exception as exc:
             warnings.warn(
                 f"Batched Jacobian kernel unavailable ({type(exc).__name__}: {exc}); "
-                "falling back to the scalar (serial) Jacobian path.",
+                "falling back to the scalar Jacobian path.",
                 RuntimeWarning,
                 stacklevel=2,
             )

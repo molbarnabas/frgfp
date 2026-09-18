@@ -8,8 +8,12 @@ namespace {
 
 // Minimum n_coeffs before the scalar finite-difference loop is parallelized.
 constexpr int kParallelThreshold = 256;
-// Minimum n_coeffs before the batched (prange) Jacobian path is used.
+// Minimum n_coeffs before the batched Jacobian path is used.
 constexpr int kBatchThreshold = 64;
+// Upper bound on n_points * 2*n_coeffs for the batched path. Each workspace
+// holds four such row-major matrices, and multistart keeps up to
+// omp_get_max_threads() workspaces alive at once, so this caps peak memory.
+constexpr long long kBatchMaxElements = 500000;
 
 // Ties Eigen's internal (GEMM) thread count to the caller's `multithread`
 // flag: 1 thread when disabled, the OpenMP maximum (0) when enabled.
@@ -158,6 +162,7 @@ bool LPACollSolver_cpp::can_use_batch(bool multithread) const
         && flowrhs_batch_c_func_ != nullptr
         && inv_dim_ == 1
         && n_coeffs_ >= kBatchThreshold
+        && static_cast<long long>(n_points_) * (2LL * n_coeffs_) <= kBatchMaxElements
         && !omp_in_parallel();
 }
 
