@@ -58,31 +58,20 @@ root_doc = "index"
 language = "en"
 
 # -- Options for HTML output -------------------------------------------------
-# Same theme as the SciPy documentation (pydata-sphinx-theme).
+# Same theme as the NumPy documentation (pydata-sphinx-theme).
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_logo = "../../frgfp_logo.png"
+html_title = f"{project} v{version} documentation"
 html_last_updated_fmt = "%b %d, %Y"
+html_context = {"default_mode": "light"}
 
 html_theme_options = {
+    "github_url": "https://github.com/molbarnabas/frgfp",
+    "collapse_navigation": True,
     "header_links_before_dropdown": 6,
-    "icon_links": [
-        {
-            "name": "GitHub",
-            "url": "https://github.com/molbarnabas/frgfp",
-            "icon": "fa-brands fa-github",
-        },
-    ],
-    "logo": {"text": "FRGfp"},
-    "navbar_start": ["navbar-logo"],
-    "navbar_end": ["theme-switcher", "navbar-icon-links"],
+    "navbar_end": ["search-button", "theme-switcher", "navbar-icon-links"],
     "navbar_persistent": [],
-    "secondary_sidebar_items": ["page-toc"],
-}
-
-html_sidebars = {
-    "index": ["search-button-field"],
-    "**": ["search-button-field", "sidebar-nav-bs"],
 }
 
 # -- Options for autodoc -----------------------------------------------------
