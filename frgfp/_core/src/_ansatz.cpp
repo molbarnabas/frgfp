@@ -74,10 +74,103 @@ namespace {
         }
         return c;
     }
+
+    // Flat coefficient index -> per-dimension multi-index, built once per call.
+    // The decomposition depends only on the flat index, so hoisting it out of
+    // the point loop removes num_coeffs * num_points redundant divisions and the
+    // per-iteration heap allocation of the old inner-loop std::vector<int>.
+    std::vector<int> build_multi_index_table(int inv_dim, const Eigen::VectorXi& order, int num_coeffs) {
+        std::vector<int> table(static_cast<size_t>(num_coeffs) * inv_dim, 0);
+        for (int i = 0; i < num_coeffs; ++i) {
+            int current_flat = i;
+            for (int d = inv_dim - 1; d >= 0; --d) {
+                const int base = order(d) + 1;
+                table[static_cast<size_t>(i) * inv_dim + d] = current_flat % base;
+                current_flat /= base;
+            }
+        }
+        return table;
+    }
+
+    // The three tensor-product evaluations below are cache-layout identical for
+    // both ansaetze; only the cache *construction* differs. Coefficient-index
+    // outer / point-index inner keeps every M(:,i) and cache access contiguous.
+
+    Eigen::MatrixXd eval_basis_from_caches(const Caches1D& caches, int inv_dim,
+                                           int n_points, int num_coeffs,
+                                           const std::vector<int>& idx) {
+        Eigen::MatrixXd M(n_points, num_coeffs);
+        for (int i = 0; i < num_coeffs; ++i) {
+            const int* mi = &idx[static_cast<size_t>(i) * inv_dim];
+            for (int p = 0; p < n_points; ++p) {
+                double val = 1.0;
+                for (int d = 0; d < inv_dim; ++d) {
+                    val *= caches.v0[d](p, mi[d]);
+                }
+                M(p, i) = val;
+            }
+        }
+        return M;
+    }
+
+    std::vector<Eigen::MatrixXd> eval_grad_from_caches(const Caches1D& caches, int inv_dim,
+                                                       int n_points, int num_coeffs,
+                                                       const std::vector<int>& idx) {
+        std::vector<Eigen::MatrixXd> grads(inv_dim, Eigen::MatrixXd::Zero(n_points, num_coeffs));
+        for (int i = 0; i < num_coeffs; ++i) {
+            const int* mi = &idx[static_cast<size_t>(i) * inv_dim];
+            for (int p = 0; p < n_points; ++p) {
+                for (int target_d = 0; target_d < inv_dim; ++target_d) {
+                    double val = 1.0;
+                    for (int d = 0; d < inv_dim; ++d) {
+                        if (d == target_d) val *= caches.v1[d](p, mi[d]);
+                        else val *= caches.v0[d](p, mi[d]);
+                    }
+                    grads[target_d](p, i) = val;
+                }
+            }
+        }
+        return grads;
+    }
+
+    std::vector<Eigen::MatrixXd> eval_hess_from_caches(const Caches1D& caches, int inv_dim,
+                                                       int n_points, int num_coeffs,
+                                                       const std::vector<int>& idx) {
+        const int hess_dim = inv_dim * inv_dim;
+        std::vector<Eigen::MatrixXd> hesss(hess_dim, Eigen::MatrixXd::Zero(n_points, num_coeffs));
+        for (int i = 0; i < num_coeffs; ++i) {
+            const int* mi = &idx[static_cast<size_t>(i) * inv_dim];
+            for (int p = 0; p < n_points; ++p) {
+                for (int d1 = 0; d1 < inv_dim; ++d1) {
+                    for (int d2 = 0; d2 < inv_dim; ++d2) {
+                        double val = 1.0;
+                        for (int d = 0; d < inv_dim; ++d) {
+                            if (d == d1 && d == d2) val *= caches.v2[d](p, mi[d]);
+                            else if (d == d1 || d == d2) val *= caches.v1[d](p, mi[d]);
+                            else val *= caches.v0[d](p, mi[d]);
+                        }
+                        hesss[d1 * inv_dim + d2](p, i) = val;
+                    }
+                }
+            }
+        }
+        return hesss;
+    }
 }
 
 namespace frgfp {
 namespace core {
+
+// --- Ansatz (default fused evaluation) ---
+
+void Ansatz::evaluate_all(const Eigen::MatrixXd& grid,
+                          Eigen::MatrixXd& M,
+                          std::vector<Eigen::MatrixXd>& grads,
+                          std::vector<Eigen::MatrixXd>& hesss) const {
+    M = evaluate_basis(grid);
+    grads = evaluate_basis_grad(grid);
+    hesss = evaluate_basis_hess(grid);
+}
 
 // --- ChebyshevAnsatz ---
 
@@ -89,81 +182,34 @@ ChebyshevAnsatz::ChebyshevAnsatz(int inv_dim, const Eigen::VectorXi& order, cons
 }
 
 Eigen::MatrixXd ChebyshevAnsatz::evaluate_basis(const Eigen::MatrixXd& grid) const {
-    int n_points = grid.rows();
-    Caches1D caches = build_cheb_caches(m_inv_dim, m_order, m_interval, grid);
-    Eigen::MatrixXd M = Eigen::MatrixXd::Ones(n_points, m_num_coeffs);
-
-    for (int p = 0; p < n_points; ++p) {
-        for (int i = 0; i < m_num_coeffs; ++i) {
-            int current_flat = i;
-            double val = 1.0;
-            for (int d = m_inv_dim - 1; d >= 0; --d) {
-                int i_d = current_flat % (m_order(d) + 1);
-                current_flat /= (m_order(d) + 1);
-                val *= caches.v0[d](p, i_d);
-            }
-            M(p, i) = val;
-        }
-    }
-    return M;
+    const Caches1D caches = build_cheb_caches(m_inv_dim, m_order, m_interval, grid);
+    return eval_basis_from_caches(caches, m_inv_dim, grid.rows(), m_num_coeffs,
+                                  build_multi_index_table(m_inv_dim, m_order, m_num_coeffs));
 }
 
 std::vector<Eigen::MatrixXd> ChebyshevAnsatz::evaluate_basis_grad(const Eigen::MatrixXd& grid) const {
-    int n_points = grid.rows();
-    Caches1D caches = build_cheb_caches(m_inv_dim, m_order, m_interval, grid);
-    std::vector<Eigen::MatrixXd> grads(m_inv_dim, Eigen::MatrixXd::Zero(n_points, m_num_coeffs));
-
-    for (int p = 0; p < n_points; ++p) {
-        for (int i = 0; i < m_num_coeffs; ++i) {
-            std::vector<int> multi_idx(m_inv_dim);
-            int current_flat = i;
-            for (int d = m_inv_dim - 1; d >= 0; --d) {
-                multi_idx[d] = current_flat % (m_order(d) + 1);
-                current_flat /= (m_order(d) + 1);
-            }
-
-            for (int target_d = 0; target_d < m_inv_dim; ++target_d) {
-                double val = 1.0;
-                for (int d = 0; d < m_inv_dim; ++d) {
-                    if (d == target_d) val *= caches.v1[d](p, multi_idx[d]);
-                    else val *= caches.v0[d](p, multi_idx[d]);
-                }
-                grads[target_d](p, i) = val;
-            }
-        }
-    }
-    return grads;
+    const Caches1D caches = build_cheb_caches(m_inv_dim, m_order, m_interval, grid);
+    return eval_grad_from_caches(caches, m_inv_dim, grid.rows(), m_num_coeffs,
+                                 build_multi_index_table(m_inv_dim, m_order, m_num_coeffs));
 }
 
 std::vector<Eigen::MatrixXd> ChebyshevAnsatz::evaluate_basis_hess(const Eigen::MatrixXd& grid) const {
-    int n_points = grid.rows();
-    Caches1D caches = build_cheb_caches(m_inv_dim, m_order, m_interval, grid);
-    int hess_dim = m_inv_dim * m_inv_dim;
-    std::vector<Eigen::MatrixXd> hesss(hess_dim, Eigen::MatrixXd::Zero(n_points, m_num_coeffs));
+    const Caches1D caches = build_cheb_caches(m_inv_dim, m_order, m_interval, grid);
+    return eval_hess_from_caches(caches, m_inv_dim, grid.rows(), m_num_coeffs,
+                                 build_multi_index_table(m_inv_dim, m_order, m_num_coeffs));
+}
 
-    for (int p = 0; p < n_points; ++p) {
-        for (int i = 0; i < m_num_coeffs; ++i) {
-            std::vector<int> multi_idx(m_inv_dim);
-            int current_flat = i;
-            for (int d = m_inv_dim - 1; d >= 0; --d) {
-                multi_idx[d] = current_flat % (m_order(d) + 1);
-                current_flat /= (m_order(d) + 1);
-            }
-
-            for (int d1 = 0; d1 < m_inv_dim; ++d1) {
-                for (int d2 = 0; d2 < m_inv_dim; ++d2) {
-                    double val = 1.0;
-                    for (int d = 0; d < m_inv_dim; ++d) {
-                        if (d == d1 && d == d2) val *= caches.v2[d](p, multi_idx[d]);
-                        else if (d == d1 || d == d2) val *= caches.v1[d](p, multi_idx[d]);
-                        else val *= caches.v0[d](p, multi_idx[d]);
-                    }
-                    hesss[d1 * m_inv_dim + d2](p, i) = val;
-                }
-            }
-        }
-    }
-    return hesss;
+void ChebyshevAnsatz::evaluate_all(const Eigen::MatrixXd& grid,
+                                   Eigen::MatrixXd& M,
+                                   std::vector<Eigen::MatrixXd>& grads,
+                                   std::vector<Eigen::MatrixXd>& hesss) const {
+    // One cache build and one multi-index table feed all three evaluations.
+    const Caches1D caches = build_cheb_caches(m_inv_dim, m_order, m_interval, grid);
+    const int n_points = grid.rows();
+    const std::vector<int> idx = build_multi_index_table(m_inv_dim, m_order, m_num_coeffs);
+    M = eval_basis_from_caches(caches, m_inv_dim, n_points, m_num_coeffs, idx);
+    grads = eval_grad_from_caches(caches, m_inv_dim, n_points, m_num_coeffs, idx);
+    hesss = eval_hess_from_caches(caches, m_inv_dim, n_points, m_num_coeffs, idx);
 }
 
 // --- PolyAnsatz ---
@@ -176,81 +222,34 @@ PolyAnsatz::PolyAnsatz(int inv_dim, const Eigen::VectorXi& order, const Eigen::V
 }
 
 Eigen::MatrixXd PolyAnsatz::evaluate_basis(const Eigen::MatrixXd& grid) const {
-    int n_points = grid.rows();
-    Caches1D caches = build_poly_caches(m_inv_dim, m_order, m_center, grid);
-    Eigen::MatrixXd M = Eigen::MatrixXd::Ones(n_points, m_num_coeffs);
-
-    for (int p = 0; p < n_points; ++p) {
-        for (int i = 0; i < m_num_coeffs; ++i) {
-            int current_flat = i;
-            double val = 1.0;
-            for (int d = m_inv_dim - 1; d >= 0; --d) {
-                int i_d = current_flat % (m_order(d) + 1);
-                current_flat /= (m_order(d) + 1);
-                val *= caches.v0[d](p, i_d);
-            }
-            M(p, i) = val;
-        }
-    }
-    return M;
+    const Caches1D caches = build_poly_caches(m_inv_dim, m_order, m_center, grid);
+    return eval_basis_from_caches(caches, m_inv_dim, grid.rows(), m_num_coeffs,
+                                  build_multi_index_table(m_inv_dim, m_order, m_num_coeffs));
 }
 
 std::vector<Eigen::MatrixXd> PolyAnsatz::evaluate_basis_grad(const Eigen::MatrixXd& grid) const {
-    int n_points = grid.rows();
-    Caches1D caches = build_poly_caches(m_inv_dim, m_order, m_center, grid);
-    std::vector<Eigen::MatrixXd> grads(m_inv_dim, Eigen::MatrixXd::Zero(n_points, m_num_coeffs));
-
-    for (int p = 0; p < n_points; ++p) {
-        for (int i = 0; i < m_num_coeffs; ++i) {
-            std::vector<int> multi_idx(m_inv_dim);
-            int current_flat = i;
-            for (int d = m_inv_dim - 1; d >= 0; --d) {
-                multi_idx[d] = current_flat % (m_order(d) + 1);
-                current_flat /= (m_order(d) + 1);
-            }
-
-            for (int target_d = 0; target_d < m_inv_dim; ++target_d) {
-                double val = 1.0;
-                for (int d = 0; d < m_inv_dim; ++d) {
-                    if (d == target_d) val *= caches.v1[d](p, multi_idx[d]);
-                    else val *= caches.v0[d](p, multi_idx[d]);
-                }
-                grads[target_d](p, i) = val;
-            }
-        }
-    }
-    return grads;
+    const Caches1D caches = build_poly_caches(m_inv_dim, m_order, m_center, grid);
+    return eval_grad_from_caches(caches, m_inv_dim, grid.rows(), m_num_coeffs,
+                                 build_multi_index_table(m_inv_dim, m_order, m_num_coeffs));
 }
 
 std::vector<Eigen::MatrixXd> PolyAnsatz::evaluate_basis_hess(const Eigen::MatrixXd& grid) const {
-    int n_points = grid.rows();
-    Caches1D caches = build_poly_caches(m_inv_dim, m_order, m_center, grid);
-    int hess_dim = m_inv_dim * m_inv_dim;
-    std::vector<Eigen::MatrixXd> hesss(hess_dim, Eigen::MatrixXd::Zero(n_points, m_num_coeffs));
+    const Caches1D caches = build_poly_caches(m_inv_dim, m_order, m_center, grid);
+    return eval_hess_from_caches(caches, m_inv_dim, grid.rows(), m_num_coeffs,
+                                 build_multi_index_table(m_inv_dim, m_order, m_num_coeffs));
+}
 
-    for (int p = 0; p < n_points; ++p) {
-        for (int i = 0; i < m_num_coeffs; ++i) {
-            std::vector<int> multi_idx(m_inv_dim);
-            int current_flat = i;
-            for (int d = m_inv_dim - 1; d >= 0; --d) {
-                multi_idx[d] = current_flat % (m_order(d) + 1);
-                current_flat /= (m_order(d) + 1);
-            }
-
-            for (int d1 = 0; d1 < m_inv_dim; ++d1) {
-                for (int d2 = 0; d2 < m_inv_dim; ++d2) {
-                    double val = 1.0;
-                    for (int d = 0; d < m_inv_dim; ++d) {
-                        if (d == d1 && d == d2) val *= caches.v2[d](p, multi_idx[d]);
-                        else if (d == d1 || d == d2) val *= caches.v1[d](p, multi_idx[d]);
-                        else val *= caches.v0[d](p, multi_idx[d]);
-                    }
-                    hesss[d1 * m_inv_dim + d2](p, i) = val;
-                }
-            }
-        }
-    }
-    return hesss;
+void PolyAnsatz::evaluate_all(const Eigen::MatrixXd& grid,
+                              Eigen::MatrixXd& M,
+                              std::vector<Eigen::MatrixXd>& grads,
+                              std::vector<Eigen::MatrixXd>& hesss) const {
+    // One cache build and one multi-index table feed all three evaluations.
+    const Caches1D caches = build_poly_caches(m_inv_dim, m_order, m_center, grid);
+    const int n_points = grid.rows();
+    const std::vector<int> idx = build_multi_index_table(m_inv_dim, m_order, m_num_coeffs);
+    M = eval_basis_from_caches(caches, m_inv_dim, n_points, m_num_coeffs, idx);
+    grads = eval_grad_from_caches(caches, m_inv_dim, n_points, m_num_coeffs, idx);
+    hesss = eval_hess_from_caches(caches, m_inv_dim, n_points, m_num_coeffs, idx);
 }
 
 } // namespace core

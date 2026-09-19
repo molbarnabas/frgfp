@@ -40,14 +40,13 @@ from ._core import (
     FuncFromAnsatz
 )
 
+from . import lpa
+
 __all__ = [
     "PolyAnsatz",
     "ChebyshevAnsatz",
     "uniform_collgrid",
     "chebyshev_collgrid",
     "FuncFromAnsatz",
+    "lpa",
 ]
-
-from . import lpa
-
-__all__ = ["lpa"]

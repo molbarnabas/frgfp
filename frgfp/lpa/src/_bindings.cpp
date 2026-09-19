@@ -15,7 +15,12 @@ PYBIND11_MODULE(_lpa_cpp, m) {
         .def_readonly("error", &frgfp::lpa::OptimizeResult::error);
 
     py::class_<frgfp::lpa::LPACollSolver_cpp>(m, "LPACollSolver_cpp")
-        .def(py::init<const Eigen::MatrixXd&, std::shared_ptr<frgfp::core::Ansatz>, size_t, size_t, int, int>())
+        .def(py::init<const Eigen::MatrixXd&, std::shared_ptr<frgfp::core::Ansatz>,
+                      size_t, size_t, size_t, size_t, int, int>(),
+             py::arg("coll_grid"), py::arg("ansatz"),
+             py::arg("cfunc_ptr"), py::arg("batch_cfunc_ptr"),
+             py::arg("sens_cfunc_ptr"), py::arg("sens_par_cfunc_ptr"),
+             py::arg("inv_dim"), py::arg("param_dim"))
         .def("local_optimize", &frgfp::lpa::LPACollSolver_cpp::local_optimize,
              py::call_guard<py::gil_scoped_release>(),
              py::arg("init_coeffs"), py::arg("maxiter"), py::arg("tol"), 

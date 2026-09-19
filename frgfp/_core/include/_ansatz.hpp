@@ -20,6 +20,15 @@ public:
     virtual Eigen::MatrixXd evaluate_basis(const Eigen::MatrixXd& grid) const = 0;
     virtual std::vector<Eigen::MatrixXd> evaluate_basis_grad(const Eigen::MatrixXd& grid) const = 0;
     virtual std::vector<Eigen::MatrixXd> evaluate_basis_hess(const Eigen::MatrixXd& grid) const = 0;
+
+    // Fused evaluation of the basis, its gradient and its Hessian from a single
+    // set of 1D caches. The default implementation simply forwards to the three
+    // individual calls; concrete ansaetze override it to avoid rebuilding the
+    // caches (and re-deriving the multi-index table) three times.
+    virtual void evaluate_all(const Eigen::MatrixXd& grid,
+                              Eigen::MatrixXd& M,
+                              std::vector<Eigen::MatrixXd>& grads,
+                              std::vector<Eigen::MatrixXd>& hesss) const;
 };
 
 class ChebyshevAnsatz : public Ansatz {
@@ -32,6 +41,10 @@ public:
     Eigen::MatrixXd evaluate_basis(const Eigen::MatrixXd& grid) const override;
     std::vector<Eigen::MatrixXd> evaluate_basis_grad(const Eigen::MatrixXd& grid) const override;
     std::vector<Eigen::MatrixXd> evaluate_basis_hess(const Eigen::MatrixXd& grid) const override;
+    void evaluate_all(const Eigen::MatrixXd& grid,
+                      Eigen::MatrixXd& M,
+                      std::vector<Eigen::MatrixXd>& grads,
+                      std::vector<Eigen::MatrixXd>& hesss) const override;
 };
 
 class PolyAnsatz : public Ansatz {
@@ -44,6 +57,10 @@ public:
     Eigen::MatrixXd evaluate_basis(const Eigen::MatrixXd& grid) const override;
     std::vector<Eigen::MatrixXd> evaluate_basis_grad(const Eigen::MatrixXd& grid) const override;
     std::vector<Eigen::MatrixXd> evaluate_basis_hess(const Eigen::MatrixXd& grid) const override;
+    void evaluate_all(const Eigen::MatrixXd& grid,
+                      Eigen::MatrixXd& M,
+                      std::vector<Eigen::MatrixXd>& grads,
+                      std::vector<Eigen::MatrixXd>& hesss) const override;
 };
 
 } // namespace core

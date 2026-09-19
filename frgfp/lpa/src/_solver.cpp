@@ -10,6 +10,18 @@ namespace {
 constexpr int kParallelThreshold = 256;
 // Minimum n_coeffs before the batched Jacobian path is used.
 constexpr int kBatchThreshold = 64;
+// Minimum n_coeffs before the rank-1 (sensitivity) Jacobian path is used.
+// Break-even is around 3 coefficients (6 point evaluations vs 2*n_coeffs);
+// a small safety margin keeps tiny problems on the well-tested FD path.
+constexpr int kSensitivityThreshold = 16;
+// Below this many collocation points the rank-1 sensitivity kernel is so cheap
+// that the serial variant beats the parallel one. Measured cross-over on this
+// class of machine: n=256 -> 0.83x, n=512 -> 1.04x, n=1024 -> 1.18x, so the
+// threshold sits just above the break-even to guarantee no regression.
+constexpr int kSensitivityParallelMinPoints = 512;
+// Minimum n_points * n_coeffs before the rank-1 Jacobian assembly is
+// parallelised: with few columns the loop leaves most threads idle.
+constexpr long long kAssemblyParallelMinWork = 32768;
 // Upper bound on n_points * 2*n_coeffs for the batched path. Each workspace
 // holds four such row-major matrices, and multistart keeps up to
 // omp_get_max_threads() workspaces alive at once, so this caps peak memory.
@@ -41,6 +53,7 @@ namespace lpa {
 LPACollSolver_cpp::LPACollSolver_cpp(const Eigen::MatrixXd& coll_grid,
                                      std::shared_ptr<core::Ansatz> ansatz,
                                      size_t cfunc_ptr, size_t batch_cfunc_ptr,
+                                     size_t sens_cfunc_ptr, size_t sens_par_cfunc_ptr,
                                      int inv_dim, int param_dim)
     : coll_grid_(coll_grid), ansatz_(ansatz), inv_dim_(inv_dim), param_dim_(param_dim) 
 {
@@ -49,9 +62,10 @@ LPACollSolver_cpp::LPACollSolver_cpp(const Eigen::MatrixXd& coll_grid,
     n_points_ = coll_grid_.rows();
     flowrhs_c_func_ = reinterpret_cast<FlowRhsFunc>(cfunc_ptr);
     flowrhs_batch_c_func_ = reinterpret_cast<BatchRhsFunc>(batch_cfunc_ptr);
+    flowrhs_sens_c_func_ = reinterpret_cast<SensRhsFunc>(sens_cfunc_ptr);
+    flowrhs_sens_par_c_func_ = reinterpret_cast<SensRhsFunc>(sens_par_cfunc_ptr);
 
-    M_val_ = ansatz_->evaluate_basis(coll_grid_);
-    n_coeffs_ = M_val_.cols();
+    n_coeffs_ = ansatz_->get_num_coeffs();
 
     if (n_points_ < n_coeffs_) {
         throw std::invalid_argument(
@@ -61,7 +75,12 @@ LPACollSolver_cpp::LPACollSolver_cpp(const Eigen::MatrixXd& coll_grid,
         );
     }
 
-    auto grad_vec = ansatz_->evaluate_basis_grad(coll_grid_);
+    // Fused evaluation: the basis, gradient and Hessian matrices are built from
+    // a single set of 1D caches instead of three independent rebuilds.
+    std::vector<Eigen::MatrixXd> grad_vec;
+    std::vector<Eigen::MatrixXd> hess_vec;
+    ansatz_->evaluate_all(coll_grid_, M_val_, grad_vec, hess_vec);
+
     M_grad_.resize(n_points_ * inv_dim_, n_coeffs_);
     for (int pt = 0; pt < n_points_; ++pt) {
         for (int d = 0; d < inv_dim_; ++d) {
@@ -69,7 +88,6 @@ LPACollSolver_cpp::LPACollSolver_cpp(const Eigen::MatrixXd& coll_grid,
         }
     }
 
-    auto hess_vec = ansatz_->evaluate_basis_hess(coll_grid_);
     M_hess_.resize(n_points_ * inv_dim_ * inv_dim_, n_coeffs_);
     for (int pt = 0; pt < n_points_; ++pt) {
         for (int d1 = 0; d1 < inv_dim_; ++d1) {
@@ -88,13 +106,21 @@ LPACollSolver_cpp::IterationWorkspace::IterationWorkspace(int n_points, int inv_
       dV_base(n_points * inv_dim),
       ddV_base(n_points * inv_dim * inv_dim),
       r_base(n_points),
-      V(threads, Eigen::VectorXd(n_points)),
-      dV(threads, Eigen::VectorXd(n_points * inv_dim)),
-      ddV(threads, Eigen::VectorXd(n_points * inv_dim * inv_dim)),
-      rhs(threads, Eigen::VectorXd(n_points)),
-      r_plus(threads, Eigen::VectorXd(n_points)),
-      r_minus(threads, Eigen::VectorXd(n_points)),
-      J(n_points, n_coeffs) {}
+      J(n_points, n_coeffs),
+      fV(n_points),
+      fdV(n_points),
+      fddV(n_points) {}
+
+void LPACollSolver_cpp::IterationWorkspace::ensure_fd_scratch(int n_points, int inv_dim, int threads)
+{
+    if (static_cast<int>(V.size()) >= threads) return;
+    V.assign(threads, Eigen::VectorXd(n_points));
+    dV.assign(threads, Eigen::VectorXd(n_points * inv_dim));
+    ddV.assign(threads, Eigen::VectorXd(n_points * inv_dim * inv_dim));
+    rhs.assign(threads, Eigen::VectorXd(n_points));
+    r_plus.assign(threads, Eigen::VectorXd(n_points));
+    r_minus.assign(threads, Eigen::VectorXd(n_points));
+}
 
 void LPACollSolver_cpp::evaluate_residual(const Eigen::VectorXd& x,
                                           IterationWorkspace& ws,
@@ -104,12 +130,11 @@ void LPACollSolver_cpp::evaluate_residual(const Eigen::VectorXd& x,
     ws.dV_base.noalias()  = M_grad_ * x;
     ws.ddV_base.noalias() = M_hess_ * x;
 
+    // The flow callback writes the base residual directly into r_base.
     flowrhs_c_func_(
         coll_grid_rm_.data(), ws.V_base.data(), ws.dV_base.data(), ws.ddV_base.data(),
-        flow_params.data(), ws.rhs[0].data(), n_points_, inv_dim_
+        flow_params.data(), ws.r_base.data(), n_points_, inv_dim_
     );
-
-    ws.r_base.noalias() = ws.rhs[0];
 }
 
 void LPACollSolver_cpp::compute_jacobian(const Eigen::VectorXd& x,
@@ -117,6 +142,11 @@ void LPACollSolver_cpp::compute_jacobian(const Eigen::VectorXd& x,
                                          const Eigen::VectorXd& flow_params,
                                          bool multithread) const
 {
+    if (can_use_sensitivity(x.size())) {
+        compute_jacobian_sensitivity(x, ws, flow_params, multithread);
+        return;
+    }
+
     if (can_use_batch(multithread)) {
         compute_jacobian_batch(x, ws, flow_params);
         return;
@@ -124,6 +154,10 @@ void LPACollSolver_cpp::compute_jacobian(const Eigen::VectorXd& x,
 
     int n_coeffs = x.size();
     bool run_parallel = multithread && (n_coeffs >= kParallelThreshold);
+
+    // The scalar finite-difference loop is the only consumer of the per-thread
+    // scratch, so it is materialised here rather than on every solver call.
+    ws.ensure_fd_scratch(n_points_, inv_dim_, run_parallel ? ws.max_threads : 1);
 
     #pragma omp parallel for if(run_parallel)
     for (int j = 0; j < n_coeffs; ++j) {
@@ -164,6 +198,57 @@ bool LPACollSolver_cpp::can_use_batch(bool multithread) const
         && n_coeffs_ >= kBatchThreshold
         && static_cast<long long>(n_points_) * (2LL * n_coeffs_) <= kBatchMaxElements
         && !omp_in_parallel();
+}
+
+bool LPACollSolver_cpp::can_use_sensitivity(int n_coeffs) const
+{
+    return inv_dim_ == 1
+        && (flowrhs_sens_c_func_ != nullptr || flowrhs_sens_par_c_func_ != nullptr)
+        && n_coeffs >= kSensitivityThreshold;
+}
+
+void LPACollSolver_cpp::compute_jacobian_sensitivity(const Eigen::VectorXd& x,
+                                                     IterationWorkspace& ws,
+                                                     const Eigen::VectorXd& flow_params,
+                                                     bool multithread) const
+{
+    (void)x;  // V_base/dV_base/ddV_base already reflect x (caller contract).
+
+    // Pick the parallel kernel only when parallel work is actually wanted, the
+    // grid is large enough to amortise the parallel-region start-up, and we are
+    // not already inside an OpenMP region.
+    SensRhsFunc probe;
+    if (multithread && !omp_in_parallel() && n_points_ >= kSensitivityParallelMinPoints
+        && flowrhs_sens_par_c_func_ != nullptr) {
+        probe = flowrhs_sens_par_c_func_;
+    } else if (flowrhs_sens_c_func_ != nullptr) {
+        probe = flowrhs_sens_c_func_;
+    } else {
+        probe = flowrhs_sens_par_c_func_;
+    }
+
+    probe(
+        coll_grid_rm_.data(), ws.V_base.data(), ws.dV_base.data(), ws.ddV_base.data(),
+        flow_params.data(), ws.fV.data(), ws.fdV.data(), ws.fddV.data(), n_points_
+    );
+
+    // J = diag(fV)*M_val + diag(fdV)*M_grad + diag(fddV)*M_hess. Every operand is
+    // column-major, so the inner loop is a fully contiguous, FMA-friendly triple.
+    // The assembly is only parallelised when the caller asked for multithreading:
+    // multithread == false must remain genuinely single-threaded.
+    const int n = n_points_;
+    const int m = n_coeffs_;
+    const bool parallel_assembly = multithread && !omp_in_parallel()
+        && (m >= kParallelThreshold
+            || static_cast<long long>(n) * m >= kAssemblyParallelMinWork);
+    #pragma omp parallel for if(parallel_assembly)
+    for (int j = 0; j < m; ++j) {
+        for (int i = 0; i < n; ++i) {
+            ws.J(i, j) = ws.fV(i) * M_val_(i, j)
+                       + ws.fdV(i) * M_grad_(i, j)
+                       + ws.fddV(i) * M_hess_(i, j);
+        }
+    }
 }
 
 void LPACollSolver_cpp::compute_jacobian_batch(const Eigen::VectorXd& x,
@@ -210,6 +295,9 @@ Eigen::VectorXd LPACollSolver_cpp::solve_linear_system(const Eigen::MatrixXd& A,
                                                        const Eigen::VectorXd& b) const
 {
     if (A.rows() == A.cols()) {
+        // Full pivoting's rank detection is load-bearing: the collocation system
+        // can be exactly rank-deficient (over-parameterised ansatz), and the
+        // zero-pivot handling is what regularises the Newton step.
         return A.fullPivLu().solve(b);
     }
     return A.colPivHouseholderQr().solve(b);

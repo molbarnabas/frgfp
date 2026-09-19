@@ -27,11 +27,24 @@ typedef void (*BatchRhsFunc)(
     const double* params, double* rhs_out, int n_points, int n_cols, int inv_dim
 );
 
+// Sensitivity variant (inv_dim == 1 only): evaluates the partial derivatives of
+// the (pointwise) scalar flow RHS with respect to V, dV and ddV at every
+// collocation point. Because the flow is pointwise in (I, V, dV, ddV), the
+// Jacobian is the rank-1 (diagonal-scaling) combination
+//     J = diag(f_V) * M_val + diag(f_dV) * M_grad + diag(f_ddV) * M_hess,
+// so only 6 flow evaluations per point are needed instead of 2*n_coeffs.
+typedef void (*SensRhsFunc)(
+    const double* I, const double* V, const double* dV, const double* ddV,
+    const double* params, double* fv_out, double* fdv_out, double* fddv_out,
+    int n_points
+);
+
 class LPACollSolver_cpp {
 public:
     LPACollSolver_cpp(const Eigen::MatrixXd& coll_grid,
                       std::shared_ptr<core::Ansatz> ansatz,
                       size_t cfunc_ptr, size_t batch_cfunc_ptr,
+                      size_t sens_cfunc_ptr, size_t sens_par_cfunc_ptr,
                       int inv_dim, int param_dim);
 
     OptimizeResult local_optimize(const Eigen::VectorXd& init_coeffs,
@@ -67,6 +80,8 @@ private:
     std::shared_ptr<core::Ansatz> ansatz_;
     FlowRhsFunc flowrhs_c_func_;
     BatchRhsFunc flowrhs_batch_c_func_;
+    SensRhsFunc flowrhs_sens_c_func_;
+    SensRhsFunc flowrhs_sens_par_c_func_;
     int inv_dim_;
     int param_dim_;
     int n_points_;
@@ -85,6 +100,10 @@ private:
         Eigen::VectorXd dV_base;
         Eigen::VectorXd ddV_base;
         Eigen::VectorXd r_base;
+        // Per-thread finite-difference scratch. Allocated lazily by
+        // ensure_fd_scratch(): the rank-1 sensitivity path needs none of it, so
+        // allocating omp_get_max_threads() copies on every solver call would be
+        // pure (and, for large grids, very expensive) dead weight.
         std::vector<Eigen::VectorXd> V;
         std::vector<Eigen::VectorXd> dV;
         std::vector<Eigen::VectorXd> ddV;
@@ -92,6 +111,12 @@ private:
         std::vector<Eigen::VectorXd> r_plus;
         std::vector<Eigen::VectorXd> r_minus;
         Eigen::MatrixXd J;
+
+        // Rank-1 Jacobian scratch: partial derivatives of the scalar flow RHS
+        // with respect to (V, dV, ddV) at every collocation point.
+        Eigen::VectorXd fV;
+        Eigen::VectorXd fdV;
+        Eigen::VectorXd fddV;
 
         // Batched finite-difference scratch (used only when inv_dim == 1).
         // Lazily sized in compute_jacobian_batch().
@@ -102,6 +127,9 @@ private:
         Eigen::VectorXd eps_batch;
 
         IterationWorkspace(int n_points, int inv_dim, int n_coeffs, int threads);
+
+        // Materialises the per-thread finite-difference scratch on first use.
+        void ensure_fd_scratch(int n_points, int inv_dim, int threads);
     };
 
     // Evaluates the base residual r(x) into ws.r_base (thread 0 buffers).
@@ -117,6 +145,18 @@ private:
 
     // True when the batched prange Jacobian path can be used.
     bool can_use_batch(bool multithread) const;
+
+    // True when the rank-1 (sensitivity) Jacobian path can be used.
+    bool can_use_sensitivity(int n_coeffs) const;
+
+    // Rank-1 Jacobian (inv_dim == 1): the pointwise flow sensitivity wrt
+    // (V, dV, ddV) turns the Jacobian into three diagonal scalings of the
+    // precomputed basis matrices, requiring only 6 flow evaluations per point.
+    // The base residual must already have been evaluated into the workspace.
+    void compute_jacobian_sensitivity(const Eigen::VectorXd& x,
+                                      IterationWorkspace& ws,
+                                      const Eigen::VectorXd& flow_params,
+                                      bool multithread) const;
 
     // Batched finite-difference Jacobian (inv_dim == 1): one callback call
     // computes both the +eps and -eps perturbations for all coefficients.
