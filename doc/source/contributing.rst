@@ -9,23 +9,35 @@ We welcome contributions! Please follow these guidelines:
 4. Update documentation as needed.
 5. Submit a pull request.
 
-Development Setup
+Development setup
 -----------------
 
 .. code-block:: bash
 
-   git clone https://github.com/yourusername/frgfp.git
+   git clone https://github.com/molbarnabas/frgfp.git
    cd frgfp
    pip install -e .[dev]
    pytest
 
-Documentation Structure
------------------------
+Building the documentation
+--------------------------
 
-The documentation is organized as follows:
+The HTML documentation lives in ``doc/`` and is built with Sphinx. It imports
+the package with ``autodoc``, so it must be built in an environment where the
+package (including its compiled C++ extensions) is installed.
 
-* ``doc/source/installation.rst`` - Installation instructions
-* ``doc/source/usage.rst`` - Usage guide with examples
-* ``doc/source/api.rst`` - API reference
-* ``doc/source/reference/`` - Auto-generated API documentation
-* ``doc/source/contributing.rst`` - Contribution guidelines
+.. code-block:: bash
+
+   pip install -r doc/requirements.txt
+   sphinx-build -b html doc/source doc/build/html
+
+or, equivalently, via the provided ``Makefile``:
+
+.. code-block:: bash
+
+   make -C doc html
+
+The API reference is generated automatically from the NumPy-style docstrings in
+the source code, so keep them up to date when changing the public API. The
+version shown in the documentation is derived from the latest git tag, matching
+how ``pyproject.toml`` is configured.

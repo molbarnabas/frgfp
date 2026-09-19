@@ -1,21 +1,43 @@
 API Reference
 =============
 
-This section documents the public API of the package.
+The public API of :mod:`frgfp`. Each entry below is rendered automatically from
+the NumPy-style docstrings in the source code.
+
+Ansätze
+-------
 
 .. autosummary::
    :toctree: reference
+   :nosignatures:
 
-   frgfp.ChebyshevAnsatz
    frgfp.PolyAnsatz
+   frgfp.ChebyshevAnsatz
+
+Functionals
+-----------
+
+.. autosummary::
+   :toctree: reference
+   :nosignatures:
+
    frgfp.FuncFromAnsatz
-   frgfp.LPACollSolver
+
+Collocation grids
+-----------------
+
+.. autosummary::
+   :toctree: reference
+   :nosignatures:
+
    frgfp.uniform_collgrid
    frgfp.chebyshev_collgrid
-   frgfp.fit_coeffs_from_grid
 
-.. toctree::
-   :maxdepth: 1
+LPA solver
+----------
 
-   reference/frgfp
-   reference/frgfp.lpa
+.. autosummary::
+   :toctree: reference
+   :nosignatures:
+
+   frgfp.lpa.LPACollSolver

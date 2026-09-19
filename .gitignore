@@ -38,3 +38,9 @@ dist/
 .vscode/
 .idea/
 .DS_Store
+
+# ==========================================
+# Sphinx documentation
+# ==========================================
+!doc/Makefile
+doc/source/reference/
