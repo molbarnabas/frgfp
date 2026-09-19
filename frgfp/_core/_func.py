@@ -1,9 +1,10 @@
 """
-Functional expansion built from an ansatz and a coefficient vector.
+Function expansion built from an ansatz and a coefficient vector.
 
-This module exposes ``FuncFromAnsatz``, which pairs an instantiated ansatz with
-its expansion coefficients and evaluates the function, its gradient, and its
-Hessian on collocation grids via the ``_core_cpp`` Eigen backend.
+This module exposes ``FuncFromAnsatz``, which represents a function expanded in
+the basis of an ansatz. The expansion coefficients are stored explicitly, and
+the expanded function together with its gradient and Hessian is evaluated on
+collocation grids via the ``_core_cpp`` Eigen backend.
 """
 
 import numpy as np
@@ -12,29 +13,29 @@ from . import _core_cpp
 
 class FuncFromAnsatz(_core_cpp.FuncFromAnsatz):
     """
-    Evaluates and manages the functional expansion of the effective potential.
+    A function expanded in the basis of an ansatz.
 
-    This class binds an instantiated Ansatz (which defines the multidimensional 
-    basis functions) with a specific vector of expansion coefficients. It leverages 
-    the Eigen C++ backend to evaluate the function, its gradient, and its Hessian 
-    on collocation grids using ultra-fast matrix-vector multiplications.
+    This class binds an instantiated Ansatz (which defines the multidimensional
+    basis functions) with a specific vector of expansion coefficients, so that
+    the expanded function, its gradient and its Hessian can be evaluated on
+    collocation grids using fast matrix-vector products in the Eigen C++ backend.
 
     Parameters
     ----------
     ansatz : frgfp.PolyAnsatz or frgfp.ChebyshevAnsatz
-        The basis function expansion object defining the functional space.
+        The basis expansion object defining the function space.
     coeffs : list of float or np.ndarray
         A 1D array of coefficients. Its length must exactly match the total 
         number of basis functions defined in the ansatz.
     """
     def __init__(self, ansatz: _core_cpp.Ansatz, coeffs: Union[List[float], np.ndarray]):
         """
-        Initialize the functional expansion.
+        Initialize the function expansion.
 
         Parameters
         ----------
         ansatz : _core_cpp.Ansatz
-            The instantiated basis expansion defining the functional space.
+            The instantiated basis expansion defining the function space.
         coeffs : list of float or np.ndarray
             A 1D array of coefficients whose length matches ``ansatz.num_coeffs``.
 
@@ -107,7 +108,7 @@ class FuncFromAnsatz(_core_cpp.FuncFromAnsatz):
     def coeffs(self) -> np.ndarray:
         """
         The current expansion coefficients. 
-        Re-assigning this attribute updates the functional dynamically.
+        Re-assigning this attribute updates the expanded function immediately.
         """
         return super().coeffs
 
@@ -125,7 +126,7 @@ class FuncFromAnsatz(_core_cpp.FuncFromAnsatz):
 
     def evaluate(self, grid: np.ndarray) -> np.ndarray:
         """
-        Evaluates the functional expansion on the given collocation grid.
+        Evaluates the expanded function on the given collocation grid.
 
         Parameters
         ----------
@@ -135,13 +136,13 @@ class FuncFromAnsatz(_core_cpp.FuncFromAnsatz):
         Returns
         -------
         np.ndarray
-            A 1D array of shape `(N_points,)` with the evaluated functional values.
+            A 1D array of shape `(N_points,)` with the evaluated function values.
         """
         return super().evaluate(grid)
 
     def evaluate_grad(self, grid: np.ndarray) -> List[np.ndarray]:
         """
-        Evaluates the gradient of the functional expansion on the given grid.
+        Evaluates the gradient of the expanded function on the given grid.
 
         Parameters
         ----------
@@ -158,7 +159,7 @@ class FuncFromAnsatz(_core_cpp.FuncFromAnsatz):
 
     def evaluate_hess(self, grid: np.ndarray) -> List[np.ndarray]:
         """
-        Evaluates the Hessian of the functional expansion on the given grid.
+        Evaluates the Hessian of the expanded function on the given grid.
 
         The Hessian components are returned as a flattened, row-major list. 
         For an invariant dimension of `N`, the list will contain `N^2` elements.
@@ -176,29 +177,37 @@ class FuncFromAnsatz(_core_cpp.FuncFromAnsatz):
         """
         return super().evaluate_hess(grid)
 
-    def evaluate_rhs(self, grid, inv_dim,flowrhs_func, flow_params: Union[List[float], np.ndarray, tuple]) -> np.ndarray:
+    def evaluate_rhs(self, grid, inv_dim, flowrhs_func, flow_params: Union[List[float], np.ndarray, tuple]) -> np.ndarray:
         """
         Evaluates the right-hand side of the flow equation on the given grid.
 
-        This method computes the flow equation's right-hand side using the current 
-        functional expansion, its derivatives, and the provided flow parameters.
+        The expanded function and its derivatives are evaluated on the grid and
+        fed, together with the flow parameters, into the user-supplied flow
+        equation.
 
         Parameters
         ----------
         grid : np.ndarray
-            A 2D array of shape `(N_points, inv_dim)` containing the grid coordinates.
-        flow_params : list or np.ndarray or tuple
-            A 1D array of parameters required by the flowrhs_func.
+            The collocation grid: either a 2D array of shape `(N_points, inv_dim)`
+            or a 1D array of shape `(N_points,)` when `inv_dim` is 1.
+        inv_dim : int
+            The invariant dimension of the problem.
         flowrhs_func : callable
             A user-defined function that computes the right-hand side of the flow 
             equation. It should accept arguments `(I, V, dV, ddV, params)`.
+        flow_params : list or np.ndarray or tuple
+            A 1D array of parameters required by the `flowrhs_func`.
 
         Returns
         -------
         np.ndarray
             A 1D array of shape `(N_points,)` with the evaluated right-hand side values.
         """
-        if inv_dim==1:
-            return flowrhs_func(grid, self.evaluate(grid), self.evaluate_grad(grid)[0], self.evaluate_hess(grid)[0], flow_params)
-        else:
-            return flowrhs_func(grid, self.evaluate(grid), self.evaluate_grad(grid), self.evaluate_hess(grid), flow_params)
+        if inv_dim == 1:
+            invariants = np.asarray(grid, dtype=np.float64).reshape(-1)
+            return flowrhs_func(
+                invariants, self.evaluate(grid), self.evaluate_grad(grid)[0],
+                self.evaluate_hess(grid)[0], flow_params)
+        return flowrhs_func(
+            grid, self.evaluate(grid), self.evaluate_grad(grid),
+            self.evaluate_hess(grid), flow_params)

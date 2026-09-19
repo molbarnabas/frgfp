@@ -2,7 +2,7 @@
 Core module containing the foundational structures of the frgfp package.
 
 This module provides the primary classes and functions required to set up
-the functional space for solving FRG flow equations. It includes polynomial
+the function space for solving FRG flow equations. It includes polynomial
 and orthogonal basis expansions (ansätze) evaluated via the C++ Eigen backend,
 as well as rigorous multidimensional collocation grid generators and function
 evaluators.

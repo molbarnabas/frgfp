@@ -434,7 +434,7 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
     coll_grid : np.ndarray
         A 2D array of shape `(N_points, inv_dim)` containing the collocation grid.
     ansatz : frgfp.Ansatz
-        The basis function expansion object defining the functional space.
+        The basis function expansion object defining the function space.
     flowrhs_func : callable
         A user-defined function that computes the right-hand side of the flow
         equation. It should accept arguments `(I, V, dV, ddV, params)`.
@@ -464,7 +464,7 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         coll_grid : np.ndarray
             A 2D array of shape `(N_points, inv_dim)` containing the collocation grid.
         ansatz : frgfp.Ansatz
-            The basis function expansion object defining the functional space.
+            The basis function expansion object defining the function space.
         flowrhs_func : callable
             A user-defined function that computes the right-hand side of the flow
             equation. It should accept arguments `(I, V, dV, ddV, params)`.
