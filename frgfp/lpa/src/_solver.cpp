@@ -19,9 +19,6 @@ constexpr int kSensitivityThreshold = 16;
 // class of machine: n=256 -> 0.83x, n=512 -> 1.04x, n=1024 -> 1.18x, so the
 // threshold sits just above the break-even to guarantee no regression.
 constexpr int kSensitivityParallelMinPoints = 512;
-// Minimum n_points * n_coeffs before the rank-1 Jacobian assembly is
-// parallelised: with few columns the loop leaves most threads idle.
-constexpr long long kAssemblyParallelMinWork = 32768;
 // Upper bound on n_points * 2*n_coeffs for the batched path. Each workspace
 // holds four such row-major matrices, and multistart keeps up to
 // omp_get_max_threads() workspaces alive at once, so this caps peak memory.
@@ -108,8 +105,8 @@ LPACollSolver_cpp::IterationWorkspace::IterationWorkspace(int n_points, int inv_
       r_base(n_points),
       J(n_points, n_coeffs),
       fV(n_points),
-      fdV(n_points),
-      fddV(n_points) {}
+      fdV(n_points * inv_dim),
+      fddV(n_points * inv_dim * inv_dim) {}
 
 void LPACollSolver_cpp::IterationWorkspace::ensure_fd_scratch(int n_points, int inv_dim, int threads)
 {
@@ -202,8 +199,9 @@ bool LPACollSolver_cpp::can_use_batch(bool multithread) const
 
 bool LPACollSolver_cpp::can_use_sensitivity(int n_coeffs) const
 {
-    return inv_dim_ == 1
-        && (flowrhs_sens_c_func_ != nullptr || flowrhs_sens_par_c_func_ != nullptr)
+    // Works for any invariant dimension: the rank-1 decomposition sums over the
+    // inv_dim (gradient) and inv_dim^2 (Hessian) basis-matrix blocks.
+    return (flowrhs_sens_c_func_ != nullptr || flowrhs_sens_par_c_func_ != nullptr)
         && n_coeffs >= kSensitivityThreshold;
 }
 
@@ -232,21 +230,53 @@ void LPACollSolver_cpp::compute_jacobian_sensitivity(const Eigen::VectorXd& x,
         flow_params.data(), ws.fV.data(), ws.fdV.data(), ws.fddV.data(), n_points_
     );
 
-    // J = diag(fV)*M_val + diag(fdV)*M_grad + diag(fddV)*M_hess. Every operand is
-    // column-major, so the inner loop is a fully contiguous, FMA-friendly triple.
-    // The assembly is only parallelised when the caller asked for multithreading:
-    // multithread == false must remain genuinely single-threaded.
+    // J = diag(fV) * M_val + sum_a diag(fdV_a) * M_grad_a
+    //   + sum_{a,b} diag(fddV_ab) * M_hess_ab.
+    // Every operand is column-major, so for a fixed column j the rows belonging
+    // to point i form contiguous runs in all four matrices.
+    //
+    // The assembly is deliberately kept serial. It is a pure streaming,
+    // bandwidth-bound loop (no arithmetic intensity, no reduction), so splitting
+    // it over threads buys no throughput while paying an OpenMP fork-join: it
+    // measured 0.92x-0.98x (i.e. slower) across 1D/2D cases and at best 1.01x for
+    // a very large grid. `multithread` therefore only drives the genuinely
+    // compute-bound kernels (sensitivity and finite-difference callbacks).
     const int n = n_points_;
     const int m = n_coeffs_;
-    const bool parallel_assembly = multithread && !omp_in_parallel()
-        && (m >= kParallelThreshold
-            || static_cast<long long>(n) * m >= kAssemblyParallelMinWork);
-    #pragma omp parallel for if(parallel_assembly)
+    const int d = inv_dim_;
+    const int dd = d * d;
+    if (d == 1) {
+        // Flat fast path: with a single invariant all three basis matrices have
+        // identical shapes, so the assembly is one vectorisable expression.
+        for (int j = 0; j < m; ++j) {
+            for (int i = 0; i < n; ++i) {
+                ws.J(i, j) = ws.fV(i) * M_val_(i, j)
+                           + ws.fdV(i) * M_grad_(i, j)
+                           + ws.fddV(i) * M_hess_(i, j);
+            }
+        }
+        return;
+    }
+
+    // General path: accumulate the inv_dim gradient blocks and the inv_dim^2
+    // Hessian blocks belonging to each collocation point.
     for (int j = 0; j < m; ++j) {
         for (int i = 0; i < n; ++i) {
-            ws.J(i, j) = ws.fV(i) * M_val_(i, j)
-                       + ws.fdV(i) * M_grad_(i, j)
-                       + ws.fddV(i) * M_hess_(i, j);
+            double val = ws.fV(i) * M_val_(i, j);
+
+            const double* f_dv = &ws.fdV(i * d);
+            const double* grad_row = &M_grad_(i * d, j);
+            for (int a = 0; a < d; ++a) {
+                val += f_dv[a] * grad_row[a];
+            }
+
+            const double* f_ddv = &ws.fddV(i * dd);
+            const double* hess_row = &M_hess_(i * dd, j);
+            for (int k = 0; k < dd; ++k) {
+                val += f_ddv[k] * hess_row[k];
+            }
+
+            ws.J(i, j) = val;
         }
     }
 }

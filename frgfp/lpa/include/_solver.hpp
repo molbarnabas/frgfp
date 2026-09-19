@@ -27,12 +27,17 @@ typedef void (*BatchRhsFunc)(
     const double* params, double* rhs_out, int n_points, int n_cols, int inv_dim
 );
 
-// Sensitivity variant (inv_dim == 1 only): evaluates the partial derivatives of
-// the (pointwise) scalar flow RHS with respect to V, dV and ddV at every
-// collocation point. Because the flow is pointwise in (I, V, dV, ddV), the
-// Jacobian is the rank-1 (diagonal-scaling) combination
-//     J = diag(f_V) * M_val + diag(f_dV) * M_grad + diag(f_ddV) * M_hess,
-// so only 6 flow evaluations per point are needed instead of 2*n_coeffs.
+// Sensitivity variant: evaluates the partial derivatives of the (pointwise)
+// flow RHS with respect to V, dV and ddV at every collocation point. Because the
+// flow is pointwise in (I, V, dV, ddV), the Jacobian is the rank-1
+// (diagonal-scaling) combination
+//     J = diag(f_V) * M_val
+//       + sum_a     diag(f_dV_a)   * M_grad_a
+//       + sum_{a,b} diag(f_ddV_ab) * M_hess_ab,
+// so only 2*(1 + inv_dim + inv_dim^2) flow evaluations per point are needed
+// instead of 2*n_coeffs. Outputs are laid out row-major as (n_points),
+// (n_points * inv_dim) and (n_points * inv_dim * inv_dim), which matches the
+// row ordering used for M_grad_ and M_hess_.
 typedef void (*SensRhsFunc)(
     const double* I, const double* V, const double* dV, const double* ddV,
     const double* params, double* fv_out, double* fdv_out, double* fddv_out,
@@ -112,8 +117,9 @@ private:
         std::vector<Eigen::VectorXd> r_minus;
         Eigen::MatrixXd J;
 
-        // Rank-1 Jacobian scratch: partial derivatives of the scalar flow RHS
-        // with respect to (V, dV, ddV) at every collocation point.
+        // Rank-1 Jacobian scratch: partial derivatives of the flow RHS with
+        // respect to (V, dV, ddV), laid out per point as the matching
+        // M_val_/M_grad_/M_hess_ row blocks are.
         Eigen::VectorXd fV;
         Eigen::VectorXd fdV;
         Eigen::VectorXd fddV;
@@ -149,9 +155,10 @@ private:
     // True when the rank-1 (sensitivity) Jacobian path can be used.
     bool can_use_sensitivity(int n_coeffs) const;
 
-    // Rank-1 Jacobian (inv_dim == 1): the pointwise flow sensitivity wrt
-    // (V, dV, ddV) turns the Jacobian into three diagonal scalings of the
-    // precomputed basis matrices, requiring only 6 flow evaluations per point.
+    // Rank-1 Jacobian: the pointwise flow sensitivity wrt (V, dV, ddV) turns the
+    // Jacobian into diagonal scalings of the precomputed basis matrices,
+    // requiring 2*(1 + inv_dim + inv_dim^2) flow evaluations per point instead of
+    // the 2*n_coeffs of the coefficient-space finite-difference Jacobian.
     // The base residual must already have been evaluated into the workspace.
     void compute_jacobian_sensitivity(const Eigen::VectorXd& x,
                                       IterationWorkspace& ws,

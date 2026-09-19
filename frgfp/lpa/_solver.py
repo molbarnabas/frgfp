@@ -12,6 +12,37 @@ from frgfp._core import FuncFromAnsatz
 from frgfp._core import _core_cpp
 from . import _lpa_cpp
 
+def _bind_threading_layer_to_openmp():
+    """
+    Bind Numba's parallel layer to OpenMP before it is initialised.
+
+    The C++ backend links OpenMP and relies on ``omp_in_parallel()`` to detect
+    nested parallel regions (e.g. ``multistart_optimize`` runs an OpenMP loop
+    around solver calls that must not spawn a nested parallel team).  Those
+    guards only work if Numba also uses the OpenMP layer, so relying on Numba's
+    default layer selection is not safe -- with a sufficiently new TBB installed
+    Numba would pick TBB and the guards would always report "not in a parallel
+    region".
+
+    Selecting ``omp`` explicitly also avoids a spurious warning: Numba probes for
+    TBB by loading ``libtbb.so.12``, which on systems shipping a TBB older than
+    2021 update 6 (e.g. Ubuntu 22.04's TBB 2021.5, interface version 12050)
+    resolves to the system library and is then rejected with a NumbaWarning
+    before falling back to OpenMP anyway.
+
+    The user's own choice always wins: an explicitly configured layer, or a layer
+    that has already been initialised, is left untouched.
+    """
+    if nb.config.THREADING_LAYER != "default":
+        return  # An explicit NUMBA_THREADING_LAYER / config setting wins.
+    try:
+        nb.threading_layer()
+    except ValueError:
+        # Not initialised yet, so it is still safe to choose the layer.
+        nb.config.THREADING_LAYER = "omp"
+
+_bind_threading_layer_to_openmp()
+
 c_sig = types.void(
     types.CPointer(types.float64), types.CPointer(types.float64),
     types.CPointer(types.float64), types.CPointer(types.float64),
@@ -195,18 +226,47 @@ def _make_batch_callback(jitted_func, param_dim):
     )
     return batch_callback
 
-def _make_sensitivity_callbacks(jitted_func, param_dim):
+def _make_sensitivity_callbacks(jitted_func, param_dim, inv_dim):
     """
     Compile the rank-1 Jacobian sensitivity kernels (serial and parallel).
 
     The flow RHS is pointwise in ``(I, V, dV, ddV)``, so its Jacobian with
-    respect to the expansion coefficients is
+    respect to the expansion coefficients is a sum of rank-1 (diagonal scaling)
+    terms::
 
-        J = diag(f_V) * M_val + diag(f_dV) * M_grad + diag(f_ddV) * M_hess,
+        J = diag(f_V) * M_val
+          + sum_a     diag(f_dV_a)   * M_grad_a
+          + sum_{a,b} diag(f_ddV_ab) * M_hess_ab
 
-    with the scalar partial derivatives obtained by central differences. That
-    needs 6 flow evaluations per collocation point instead of the
-    ``2 * n_coeffs`` evaluations of the finite-difference Jacobian.
+    The scalar partial derivatives are obtained by central differences, which
+    needs ``2 * (1 + inv_dim + inv_dim**2)`` flow evaluations per collocation
+    point instead of the ``2 * n_coeffs`` evaluations of the finite-difference
+    Jacobian.  For ``inv_dim == 1`` that is 6 evaluations per point.
+
+    Parameters
+    ----------
+    jitted_func : numba.core.registry.CPUDispatcher
+        The Numba-compiled flow function.
+    param_dim : int
+        The number of flow parameters.
+    inv_dim : int
+        The invariant dimension.  ``1`` selects the flat scalar fast path; any
+        larger value uses the general tensor path.
+
+    Returns
+    -------
+    (serial_address, parallel_address) : tuple of int
+        Addresses of the serial and parallel sensitivity C-callbacks.
+    """
+    if inv_dim != 1:
+        return _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim)
+
+    return _make_sensitivity_callbacks_1d(jitted_func, param_dim)
+
+
+def _make_sensitivity_callbacks_1d(jitted_func, param_dim):
+    """
+    Rank-1 sensitivity kernels for ``inv_dim == 1`` (flat scalar fast path).
 
     Parameters
     ----------
@@ -301,6 +361,141 @@ def _make_sensitivity_callbacks(jitted_func, param_dim):
 
     return serial_callback.address, parallel_callback.address
 
+def _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim):
+    """
+    Rank-1 sensitivity kernels for ``inv_dim > 1`` (general tensor path).
+
+    ``dV`` is a length-``inv_dim`` vector and ``ddV`` an ``inv_dim`` x
+    ``inv_dim`` matrix at every collocation point, so the derivative set is
+    ``f_V`` (scalar), ``f_dV`` (vector) and ``f_ddV`` (matrix).  Every component
+    is finite-differenced independently, costing
+    ``2 * (1 + inv_dim + inv_dim**2)`` flow evaluations per point -- 14 for two
+    invariants, 26 for three -- against ``2 * n_coeffs`` for the
+    coefficient-space finite-difference Jacobian.
+
+    The scratch used to build the perturbed inputs is indexed by
+    ``numba.get_thread_id()`` in the parallel kernel, so nothing is allocated
+    inside the parallel loop and the buffers cannot race.
+
+    Parameters
+    ----------
+    jitted_func : numba.core.registry.CPUDispatcher
+        The Numba-compiled flow function.
+    param_dim : int
+        The number of flow parameters.
+    inv_dim : int
+        The invariant dimension (must be greater than one).
+
+    Returns
+    -------
+    (serial_address, parallel_address) : tuple of int
+        Addresses of the serial and parallel sensitivity C-callbacks.
+    """
+    @nb.njit(fastmath=True, inline="always")
+    def sens_point(i, I_arr, V_arr, dV_arr, ddV_arr, params_arr, fV, fdV, fddV,
+                   dv_p, dv_m, ddv_p, ddv_m):
+        """Evaluate every flow sensitivity at a single collocation point."""
+        v = V_arr[i]
+        ii = I_arr[i]
+
+        hv = 1e-6 * max(1.0, abs(v))
+        fV[i] = (jitted_func(ii, v + hv, dV_arr[i], ddV_arr[i], params_arr)
+                 - jitted_func(ii, v - hv, dV_arr[i], ddV_arr[i], params_arr)) / (2.0 * hv)
+
+        for a in range(inv_dim):
+            hd = 1e-6 * max(1.0, abs(dV_arr[i, a]))
+            for b in range(inv_dim):
+                dv_p[b] = dV_arr[i, b]
+                dv_m[b] = dV_arr[i, b]
+            dv_p[a] += hd
+            dv_m[a] -= hd
+            fdV[i, a] = (jitted_func(ii, v, dv_p, ddV_arr[i], params_arr)
+                         - jitted_func(ii, v, dv_m, ddV_arr[i], params_arr)) / (2.0 * hd)
+
+        for a in range(inv_dim):
+            for b in range(inv_dim):
+                hh = 1e-6 * max(1.0, abs(ddV_arr[i, a, b]))
+                for c in range(inv_dim):
+                    for e in range(inv_dim):
+                        ddv_p[c, e] = ddV_arr[i, c, e]
+                        ddv_m[c, e] = ddV_arr[i, c, e]
+                ddv_p[a, b] += hh
+                ddv_m[a, b] -= hh
+                fddV[i, a, b] = (jitted_func(ii, v, dV_arr[i], ddv_p, params_arr)
+                                 - jitted_func(ii, v, dV_arr[i], ddv_m, params_arr)) / (2.0 * hh)
+
+    @nb.njit(fastmath=True)
+    def sens_kernel_serial(I_arr, V_arr, dV_arr, ddV_arr, params_arr, fV, fdV, fddV):
+        """Evaluate the flow sensitivities point-by-point (single-threaded)."""
+        n_pts = V_arr.shape[0]
+        dv_p = np.empty(inv_dim)
+        dv_m = np.empty(inv_dim)
+        ddv_p = np.empty((inv_dim, inv_dim))
+        ddv_m = np.empty((inv_dim, inv_dim))
+        for i in range(n_pts):
+            sens_point(i, I_arr, V_arr, dV_arr, ddV_arr, params_arr,
+                       fV, fdV, fddV, dv_p, dv_m, ddv_p, ddv_m)
+
+    @nb.njit(parallel=True, fastmath=True)
+    def sens_kernel_parallel(I_arr, V_arr, dV_arr, ddV_arr, params_arr, fV, fdV, fddV):
+        """Evaluate the flow sensitivities across points in parallel."""
+        n_pts = V_arr.shape[0]
+        n_threads = nb.get_num_threads()
+        dv_p = np.empty((n_threads, inv_dim))
+        dv_m = np.empty((n_threads, inv_dim))
+        ddv_p = np.empty((n_threads, inv_dim, inv_dim))
+        ddv_m = np.empty((n_threads, inv_dim, inv_dim))
+        for i in nb.prange(n_pts):
+            tid = nb.get_thread_id()
+            sens_point(i, I_arr, V_arr, dV_arr, ddV_arr, params_arr,
+                       fV, fdV, fddV, dv_p[tid], dv_m[tid], ddv_p[tid], ddv_m[tid])
+
+    # Force compilation of the serial kernel now (raises on a typing failure).
+    sens_kernel_serial(
+        np.full((1, inv_dim), 0.1), np.full(1, 0.1), np.full((1, inv_dim), 0.1),
+        np.full((1, inv_dim, inv_dim), 0.1), np.full(param_dim, 0.1),
+        np.zeros(1), np.zeros((1, inv_dim)), np.zeros((1, inv_dim, inv_dim)),
+    )
+
+    @cfunc(sens_sig)
+    def serial_callback(I_ptr, V_ptr, dV_ptr, ddV_ptr, params_ptr,
+                        fV_ptr, fdV_ptr, fddV_ptr, n_pts):
+        """Wrap the serial sensitivity kernel as a C-callback."""
+        sens_kernel_serial(
+            nb.carray(I_ptr, (n_pts, inv_dim)),
+            nb.carray(V_ptr, n_pts),
+            nb.carray(dV_ptr, (n_pts, inv_dim)),
+            nb.carray(ddV_ptr, (n_pts, inv_dim, inv_dim)),
+            nb.carray(params_ptr, param_dim),
+            nb.carray(fV_ptr, n_pts),
+            nb.carray(fdV_ptr, (n_pts, inv_dim)),
+            nb.carray(fddV_ptr, (n_pts, inv_dim, inv_dim)),
+        )
+
+    @cfunc(sens_sig)
+    def parallel_callback(I_ptr, V_ptr, dV_ptr, ddV_ptr, params_ptr,
+                          fV_ptr, fdV_ptr, fddV_ptr, n_pts):
+        """Wrap the parallel sensitivity kernel as a C-callback."""
+        sens_kernel_parallel(
+            nb.carray(I_ptr, (n_pts, inv_dim)),
+            nb.carray(V_ptr, n_pts),
+            nb.carray(dV_ptr, (n_pts, inv_dim)),
+            nb.carray(ddV_ptr, (n_pts, inv_dim, inv_dim)),
+            nb.carray(params_ptr, param_dim),
+            nb.carray(fV_ptr, n_pts),
+            nb.carray(fdV_ptr, (n_pts, inv_dim)),
+            nb.carray(fddV_ptr, (n_pts, inv_dim, inv_dim)),
+        )
+
+    # Warm up the parallel runtime while the GIL is still held (see the 1D path).
+    sens_kernel_parallel(
+        np.full((1, inv_dim), 0.1), np.full(1, 0.1), np.full((1, inv_dim), 0.1),
+        np.full((1, inv_dim, inv_dim), 0.1), np.full(param_dim, 0.1),
+        np.zeros(1), np.zeros((1, inv_dim)), np.zeros((1, inv_dim, inv_dim)),
+    )
+
+    return serial_callback.address, parallel_callback.address
+
 def _build_callbacks(flowrhs_func, inv_dim, param_dim):
     """
     Build (and cache) the Numba C-callbacks bridging C++ to the flow equation.
@@ -310,8 +505,8 @@ def _build_callbacks(flowrhs_func, inv_dim, param_dim):
     flowrhs_func : callable
         The user-defined flow right-hand side ``(I, V, dV, ddV, params)``.
     inv_dim : int
-        The invariant dimension; ``1`` enables the batched and rank-1 sensitivity
-        callbacks.
+        The invariant dimension; ``1`` additionally enables the batched
+        finite-difference callback.
     param_dim : int
         The number of flow parameters.
 
@@ -319,8 +514,7 @@ def _build_callbacks(flowrhs_func, inv_dim, param_dim):
     -------
     (scalar_address, batch_address, sens_address, sens_par_address) : tuple of int
         Addresses of the scalar, batched and (serial/parallel) rank-1 sensitivity
-        C-callbacks. Non-applicable entries are 0 (e.g. the batched and
-        sensitivity paths only exist for ``inv_dim == 1``).
+        C-callbacks. ``batch_address`` is 0 unless ``inv_dim == 1``.
 
     Raises
     ------
@@ -373,16 +567,20 @@ def _build_callbacks(flowrhs_func, inv_dim, param_dim):
     sens_address = 0
     sens_par_address = 0
     if inv_dim == 1:
+        # The batched finite-difference kernel assumes scalar dV/ddV layouts and
+        # therefore only exists for a single invariant.
         batch_address = _first_working(
             lambda jf: _make_batch_callback(jf, param_dim).address,
             "Batched Jacobian kernel",
         )
-        sens_pack = _first_working(
-            lambda jf: _make_sensitivity_callbacks(jf, param_dim),
-            "Rank-1 sensitivity kernel",
-        )
-        if sens_pack:
-            sens_address, sens_par_address = sens_pack
+
+    # The rank-1 sensitivity kernels work for any invariant dimension.
+    sens_pack = _first_working(
+        lambda jf: _make_sensitivity_callbacks(jf, param_dim, inv_dim),
+        "Rank-1 sensitivity kernel",
+    )
+    if sens_pack:
+        sens_address, sens_par_address = sens_pack
 
     result = (scalar_address, batch_address, sens_address, sens_par_address)
     _CALLBACK_CACHE[cache_key] = result
@@ -509,8 +707,10 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         flow_params : list or tuple or np.ndarray, optional
             Parameters required by the flow function (default is (3.95, 3)).
         multithread : bool, optional
-            Whether to use OpenMP multithreading for the Jacobian evaluation
-            (default is False).
+            Whether to parallelise the compute-bound flow-evaluation kernels
+            (the rank-1 sensitivity kernel, or the finite-difference callbacks
+            when the rank-1 path is unavailable). When False the solver runs
+            strictly single-threaded (default is False).
 
         Returns
         -------
@@ -545,8 +745,10 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         flow_params : list or tuple or np.ndarray, optional
             Parameters required by the flow function (default is (3.95, 3)).
         multithread : bool, optional
-            Whether to use OpenMP multithreading for the Jacobian evaluation
-            (default is False).
+            Whether to parallelise the compute-bound flow-evaluation kernels
+            (the rank-1 sensitivity kernel, or the finite-difference callbacks
+            when the rank-1 path is unavailable). When False the solver runs
+            strictly single-threaded (default is False).
 
         Returns
         -------
@@ -580,8 +782,10 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
             Convergence tolerance for the Euclidean norm of the residual vector
             (default is 1e-6).
         multithread : bool, optional
-            Whether to use OpenMP multithreading for the Jacobian evaluation
-            (default is True).
+            Whether to parallelise the compute-bound flow-evaluation kernels
+            (the rank-1 sensitivity kernel, or the finite-difference callbacks
+            when the rank-1 path is unavailable). When False the solver runs
+            strictly single-threaded (default is True).
 
         Returns
         -------
