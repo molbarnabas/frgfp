@@ -62,6 +62,7 @@ def o8_solver_and_guess():
     return solver, fit_poly.coeffs
 
 @pytest.mark.parametrize("multithread", [False, True])
+@pytest.mark.benchmark(group="o8_fixed_point")
 def test_o8_fixed_point_benchmark(benchmark, o8_solver_and_guess, multithread):
     """
     Benchmark only the O(8) fixed-point optimization (the solver and initial

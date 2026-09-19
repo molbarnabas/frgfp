@@ -245,6 +245,7 @@ def large_grid_2d():
 
 
 @pytest.mark.parametrize("multithread", [False, True])
+@pytest.mark.benchmark(group="large_grid_1d")
 def test_large_grid_benchmark(benchmark, large_grid_1d, multithread):
     """
     Benchmark fixed-work Newton steps on 1D grids of increasing size.
@@ -309,7 +310,7 @@ def test_large_grid_threading_consistency(large_grid_1d):
         serial.coeffs, threaded.coeffs, rtol=0.0, atol=1e-6,
         err_msg="Test failed: threading mode changed the converged coefficients.")
 
-
+@pytest.mark.benchmark(group="large_grid_2d")
 @pytest.mark.parametrize("multithread", [False, True])
 def test_large_grid_2d_benchmark(benchmark, large_grid_2d, multithread):
     """

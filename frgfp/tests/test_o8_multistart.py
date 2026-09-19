@@ -64,6 +64,7 @@ def o8_multistart_context():
         
     return solver, np.array(init_coeffs_list)
 
+@pytest.mark.benchmark(group="o8_multistart")
 def test_o8_multistart_benchmark(benchmark, o8_multistart_context):
     """
     Benchmark only the built-in multistart (the solver and initial guesses are
