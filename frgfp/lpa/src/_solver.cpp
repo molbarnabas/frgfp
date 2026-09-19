@@ -11,23 +11,13 @@ constexpr int kParallelThreshold = 256;
 // Minimum n_coeffs before the batched Jacobian path is used.
 constexpr int kBatchThreshold = 64;
 // Minimum n_coeffs before the rank-1 (sensitivity) Jacobian path is used.
-// Break-even is around 3 coefficients (6 point evaluations vs 2*n_coeffs);
-// a small safety margin keeps tiny problems on the well-tested FD path.
 constexpr int kSensitivityThreshold = 16;
-// Below this many collocation points the rank-1 sensitivity kernel is so cheap
-// that the serial variant beats the parallel one. Measured cross-over on this
-// class of machine: n=256 -> 0.83x, n=512 -> 1.04x, n=1024 -> 1.18x, so the
-// threshold sits just above the break-even to guarantee no regression.
+// Minimum collocation points before the parallel sensitivity kernel pays off.
 constexpr int kSensitivityParallelMinPoints = 512;
-// Upper bound on n_points * 2*n_coeffs for the batched path. Each workspace
-// holds four such row-major matrices, and multistart keeps up to
-// omp_get_max_threads() workspaces alive at once, so this caps peak memory.
+// Upper bound on n_points * 2*n_coeffs for the batched path (caps peak memory).
 constexpr long long kBatchMaxElements = 500000;
 
-// Ties Eigen's internal (GEMM) thread count to the caller's `multithread`
-// flag: 1 thread when disabled, the OpenMP maximum (0) when enabled.
-// Eigen's setting is a single global, so it must never be touched from inside
-// an OpenMP parallel region (e.g. multistart's concurrent inner solves).
+// Ties Eigen's global (GEMM) thread count to `multithread` outside parallel regions.
 struct EigenThreadGuard {
     int prev;
     explicit EigenThreadGuard(bool multithread) {
@@ -72,8 +62,7 @@ LPACollSolver_cpp::LPACollSolver_cpp(const Eigen::MatrixXd& coll_grid,
         );
     }
 
-    // Fused evaluation: the basis, gradient and Hessian matrices are built from
-    // a single set of 1D caches instead of three independent rebuilds.
+    // Fused evaluation of basis, gradient and Hessian from a single set of 1D caches.
     std::vector<Eigen::MatrixXd> grad_vec;
     std::vector<Eigen::MatrixXd> hess_vec;
     ansatz_->evaluate_all(coll_grid_, M_val_, grad_vec, hess_vec);
@@ -152,8 +141,7 @@ void LPACollSolver_cpp::compute_jacobian(const Eigen::VectorXd& x,
     int n_coeffs = x.size();
     bool run_parallel = multithread && (n_coeffs >= kParallelThreshold);
 
-    // The scalar finite-difference loop is the only consumer of the per-thread
-    // scratch, so it is materialised here rather than on every solver call.
+    // The scalar finite-difference loop is the only consumer of the per-thread scratch.
     ws.ensure_fd_scratch(n_points_, inv_dim_, run_parallel ? ws.max_threads : 1);
 
     #pragma omp parallel for if(run_parallel)
@@ -199,8 +187,7 @@ bool LPACollSolver_cpp::can_use_batch(bool multithread) const
 
 bool LPACollSolver_cpp::can_use_sensitivity(int n_coeffs) const
 {
-    // Works for any invariant dimension: the rank-1 decomposition sums over the
-    // inv_dim (gradient) and inv_dim^2 (Hessian) basis-matrix blocks.
+    // Works for any invariant dimension: sums the inv_dim and inv_dim^2 basis-matrix blocks.
     return (flowrhs_sens_c_func_ != nullptr || flowrhs_sens_par_c_func_ != nullptr)
         && n_coeffs >= kSensitivityThreshold;
 }
@@ -212,9 +199,7 @@ void LPACollSolver_cpp::compute_jacobian_sensitivity(const Eigen::VectorXd& x,
 {
     (void)x;  // V_base/dV_base/ddV_base already reflect x (caller contract).
 
-    // Pick the parallel kernel only when parallel work is actually wanted, the
-    // grid is large enough to amortise the parallel-region start-up, and we are
-    // not already inside an OpenMP region.
+    // Pick the parallel kernel only when it is wanted, large enough and not nested.
     SensRhsFunc probe;
     if (multithread && !omp_in_parallel() && n_points_ >= kSensitivityParallelMinPoints
         && flowrhs_sens_par_c_func_ != nullptr) {
@@ -230,24 +215,13 @@ void LPACollSolver_cpp::compute_jacobian_sensitivity(const Eigen::VectorXd& x,
         flow_params.data(), ws.fV.data(), ws.fdV.data(), ws.fddV.data(), n_points_
     );
 
-    // J = diag(fV) * M_val + sum_a diag(fdV_a) * M_grad_a
-    //   + sum_{a,b} diag(fddV_ab) * M_hess_ab.
-    // Every operand is column-major, so for a fixed column j the rows belonging
-    // to point i form contiguous runs in all four matrices.
-    //
-    // The assembly is deliberately kept serial. It is a pure streaming,
-    // bandwidth-bound loop (no arithmetic intensity, no reduction), so splitting
-    // it over threads buys no throughput while paying an OpenMP fork-join: it
-    // measured 0.92x-0.98x (i.e. slower) across 1D/2D cases and at best 1.01x for
-    // a very large grid. `multithread` therefore only drives the genuinely
-    // compute-bound kernels (sensitivity and finite-difference callbacks).
+    // J = diag(fV)*M_val + sum_a diag(fdV_a)*M_grad_a + sum_{a,b} diag(fddV_ab)*M_hess_ab, assembled serially (bandwidth-bound).
     const int n = n_points_;
     const int m = n_coeffs_;
     const int d = inv_dim_;
     const int dd = d * d;
     if (d == 1) {
-        // Flat fast path: with a single invariant all three basis matrices have
-        // identical shapes, so the assembly is one vectorisable expression.
+        // Flat fast path: a single invariant gives all three matrices the same shape.
         for (int j = 0; j < m; ++j) {
             for (int i = 0; i < n; ++i) {
                 ws.J(i, j) = ws.fV(i) * M_val_(i, j)
@@ -258,8 +232,7 @@ void LPACollSolver_cpp::compute_jacobian_sensitivity(const Eigen::VectorXd& x,
         return;
     }
 
-    // General path: accumulate the inv_dim gradient blocks and the inv_dim^2
-    // Hessian blocks belonging to each collocation point.
+    // General path: accumulate the inv_dim gradient and inv_dim^2 Hessian blocks per point.
     for (int j = 0; j < m; ++j) {
         for (int i = 0; i < n; ++i) {
             double val = ws.fV(i) * M_val_(i, j);
@@ -325,9 +298,7 @@ Eigen::VectorXd LPACollSolver_cpp::solve_linear_system(const Eigen::MatrixXd& A,
                                                        const Eigen::VectorXd& b) const
 {
     if (A.rows() == A.cols()) {
-        // Full pivoting's rank detection is load-bearing: the collocation system
-        // can be exactly rank-deficient (over-parameterised ansatz), and the
-        // zero-pivot handling is what regularises the Newton step.
+        // Full pivoting's rank detection regularises exactly rank-deficient systems.
         return A.fullPivLu().solve(b);
     }
     return A.colPivHouseholderQr().solve(b);

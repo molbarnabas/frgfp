@@ -76,9 +76,6 @@ namespace {
     }
 
     // Flat coefficient index -> per-dimension multi-index, built once per call.
-    // The decomposition depends only on the flat index, so hoisting it out of
-    // the point loop removes num_coeffs * num_points redundant divisions and the
-    // per-iteration heap allocation of the old inner-loop std::vector<int>.
     std::vector<int> build_multi_index_table(int inv_dim, const Eigen::VectorXi& order, int num_coeffs) {
         std::vector<int> table(static_cast<size_t>(num_coeffs) * inv_dim, 0);
         for (int i = 0; i < num_coeffs; ++i) {
@@ -92,9 +89,7 @@ namespace {
         return table;
     }
 
-    // The three tensor-product evaluations below are cache-layout identical for
-    // both ansaetze; only the cache *construction* differs. Coefficient-index
-    // outer / point-index inner keeps every M(:,i) and cache access contiguous.
+    // Tensor-product evaluations shared by both ansaetze (cache-layout identical).
 
     Eigen::MatrixXd eval_basis_from_caches(const Caches1D& caches, int inv_dim,
                                            int n_points, int num_coeffs,

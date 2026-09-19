@@ -20,24 +20,12 @@ typedef void (*FlowRhsFunc)(
 );
 
 // Batched variant: evaluates the flow for every (point, column) pair at once.
-// All matrices are row-major: V/dV/ddV *out* are (n_points, n_cols); for
-// inv_dim == 1 the derivative buffers are also (n_points, n_cols).
 typedef void (*BatchRhsFunc)(
     const double* I, const double* V, const double* dV, const double* ddV,
     const double* params, double* rhs_out, int n_points, int n_cols, int inv_dim
 );
 
-// Sensitivity variant: evaluates the partial derivatives of the (pointwise)
-// flow RHS with respect to V, dV and ddV at every collocation point. Because the
-// flow is pointwise in (I, V, dV, ddV), the Jacobian is the rank-1
-// (diagonal-scaling) combination
-//     J = diag(f_V) * M_val
-//       + sum_a     diag(f_dV_a)   * M_grad_a
-//       + sum_{a,b} diag(f_ddV_ab) * M_hess_ab,
-// so only 2*(1 + inv_dim + inv_dim^2) flow evaluations per point are needed
-// instead of 2*n_coeffs. Outputs are laid out row-major as (n_points),
-// (n_points * inv_dim) and (n_points * inv_dim * inv_dim), which matches the
-// row ordering used for M_grad_ and M_hess_.
+// Sensitivity variant: evaluates the pointwise flow partials (V, dV, ddV) at every point.
 typedef void (*SensRhsFunc)(
     const double* I, const double* V, const double* dV, const double* ddV,
     const double* params, double* fv_out, double* fdv_out, double* fddv_out,
@@ -57,9 +45,7 @@ public:
                                   const Eigen::VectorXd& flow_params,
                                   bool multithread = false);
 
-    // Performs exactly num_iter iteration steps, without any tolerance-based
-    // stopping criterion. The residual norm of the final iterate is reported
-    // in OptimizeResult::error.
+    // Performs exactly num_iter steps; the final residual norm is in OptimizeResult::error.
     OptimizeResult local_optimize_fixed_iterations(const Eigen::VectorXd& init_coeffs,
                                                    int num_iter,
                                                    const Eigen::VectorXd& flow_params,
@@ -95,20 +81,14 @@ private:
     Eigen::MatrixXd M_grad_;
     Eigen::MatrixXd M_hess_;
 
-    // Per-call iteration scratch. Deliberately NOT a member of the solver:
-    // multistart_optimize() runs many local_optimize() calls concurrently on the
-    // same object, so all mutable iteration state must stay call-local to remain
-    // reentrant.
+    // Per-call iteration scratch: kept call-local so concurrent multistart calls stay reentrant.
     struct IterationWorkspace {
         int max_threads;
         Eigen::VectorXd V_base;
         Eigen::VectorXd dV_base;
         Eigen::VectorXd ddV_base;
         Eigen::VectorXd r_base;
-        // Per-thread finite-difference scratch. Allocated lazily by
-        // ensure_fd_scratch(): the rank-1 sensitivity path needs none of it, so
-        // allocating omp_get_max_threads() copies on every solver call would be
-        // pure (and, for large grids, very expensive) dead weight.
+        // Per-thread finite-difference scratch, lazily allocated by ensure_fd_scratch().
         std::vector<Eigen::VectorXd> V;
         std::vector<Eigen::VectorXd> dV;
         std::vector<Eigen::VectorXd> ddV;
@@ -117,15 +97,12 @@ private:
         std::vector<Eigen::VectorXd> r_minus;
         Eigen::MatrixXd J;
 
-        // Rank-1 Jacobian scratch: partial derivatives of the flow RHS with
-        // respect to (V, dV, ddV), laid out per point as the matching
-        // M_val_/M_grad_/M_hess_ row blocks are.
+        // Rank-1 Jacobian scratch: flow partials wrt (V, dV, ddV) per point.
         Eigen::VectorXd fV;
         Eigen::VectorXd fdV;
         Eigen::VectorXd fddV;
 
-        // Batched finite-difference scratch (used only when inv_dim == 1).
-        // Lazily sized in compute_jacobian_batch().
+        // Batched finite-difference scratch (inv_dim == 1), lazily sized in compute_jacobian_batch().
         RowMajorMatrix V_batch;
         RowMajorMatrix dV_batch;
         RowMajorMatrix ddV_batch;
@@ -155,29 +132,22 @@ private:
     // True when the rank-1 (sensitivity) Jacobian path can be used.
     bool can_use_sensitivity(int n_coeffs) const;
 
-    // Rank-1 Jacobian: the pointwise flow sensitivity wrt (V, dV, ddV) turns the
-    // Jacobian into diagonal scalings of the precomputed basis matrices,
-    // requiring 2*(1 + inv_dim + inv_dim^2) flow evaluations per point instead of
-    // the 2*n_coeffs of the coefficient-space finite-difference Jacobian.
-    // The base residual must already have been evaluated into the workspace.
+    // Rank-1 Jacobian via diagonal scalings of the basis matrices; base residual must be current.
     void compute_jacobian_sensitivity(const Eigen::VectorXd& x,
                                       IterationWorkspace& ws,
                                       const Eigen::VectorXd& flow_params,
                                       bool multithread) const;
 
-    // Batched finite-difference Jacobian (inv_dim == 1): one callback call
-    // computes both the +eps and -eps perturbations for all coefficients.
+    // Batched finite-difference Jacobian (inv_dim == 1): one callback for all +/-eps columns.
     void compute_jacobian_batch(const Eigen::VectorXd& x,
                                 IterationWorkspace& ws,
                                 const Eigen::VectorXd& flow_params) const;
 
-    // Solves A * dx = b. Square A uses the rank-revealing FullPivLU,
-    // non-square A uses the column-pivoting QR (least squares).
+    // Solves A * dx = b via FullPivLU (square) or column-pivoting QR (least squares).
     Eigen::VectorXd solve_linear_system(const Eigen::MatrixXd& A,
                                         const Eigen::VectorXd& b) const;
 
-    // The Newton iteration step: assemble the Jacobian J and solve for dx.
-    // Reads only immutable solver state and writes into ws. Returns dx.
+    // The Newton iteration step: assemble J, solve for dx and return it.
     Eigen::VectorXd compute_step(const Eigen::VectorXd& x,
                                  IterationWorkspace& ws,
                                  const Eigen::VectorXd& flow_params,

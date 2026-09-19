@@ -21,10 +21,7 @@ public:
     virtual std::vector<Eigen::MatrixXd> evaluate_basis_grad(const Eigen::MatrixXd& grid) const = 0;
     virtual std::vector<Eigen::MatrixXd> evaluate_basis_hess(const Eigen::MatrixXd& grid) const = 0;
 
-    // Fused evaluation of the basis, its gradient and its Hessian from a single
-    // set of 1D caches. The default implementation simply forwards to the three
-    // individual calls; concrete ansaetze override it to avoid rebuilding the
-    // caches (and re-deriving the multi-index table) three times.
+    // Fused basis/gradient/Hessian evaluation from a single set of 1D caches.
     virtual void evaluate_all(const Eigen::MatrixXd& grid,
                               Eigen::MatrixXd& M,
                               std::vector<Eigen::MatrixXd>& grads,

@@ -13,26 +13,7 @@ from frgfp._core import _core_cpp
 from . import _lpa_cpp
 
 def _bind_threading_layer_to_openmp():
-    """
-    Bind Numba's parallel layer to OpenMP before it is initialised.
-
-    The C++ backend links OpenMP and relies on ``omp_in_parallel()`` to detect
-    nested parallel regions (e.g. ``multistart_optimize`` runs an OpenMP loop
-    around solver calls that must not spawn a nested parallel team).  Those
-    guards only work if Numba also uses the OpenMP layer, so relying on Numba's
-    default layer selection is not safe -- with a sufficiently new TBB installed
-    Numba would pick TBB and the guards would always report "not in a parallel
-    region".
-
-    Selecting ``omp`` explicitly also avoids a spurious warning: Numba probes for
-    TBB by loading ``libtbb.so.12``, which on systems shipping a TBB older than
-    2021 update 6 (e.g. Ubuntu 22.04's TBB 2021.5, interface version 12050)
-    resolves to the system library and is then rejected with a NumbaWarning
-    before falling back to OpenMP anyway.
-
-    The user's own choice always wins: an explicitly configured layer, or a layer
-    that has already been initialised, is left untouched.
-    """
+    """Bind Numba's parallel layer to OpenMP before it is initialised."""
     if nb.config.THREADING_LAYER != "default":
         return  # An explicit NUMBA_THREADING_LAYER / config setting wins.
     try:
@@ -58,8 +39,7 @@ batch_sig = types.void(
     types.intc, types.intc, types.intc
 )
 
-# Sensitivity callback (inv_dim == 1):
-# (I, V, dV, ddV, params, fV_out, fdV_out, fddV_out, n_points)
+# Sensitivity callback (inv_dim == 1): (I, V, dV, ddV, params, fV_out, fdV_out, fddV_out, n_points)
 sens_sig = types.void(
     types.CPointer(types.float64), types.CPointer(types.float64),
     types.CPointer(types.float64), types.CPointer(types.float64),
@@ -69,49 +49,20 @@ sens_sig = types.void(
     types.intc
 )
 
-# Compiled callbacks are cached per (flow function, inv_dim, param_dim,
-# build_batch, build_sensitivity, warm_parallel_sensitivity) so that
-# constructing many solvers does not recompile the expensive parallel kernel.
+# Compiled callbacks cached per (flow function, inv_dim, param_dim, build flags).
 _CALLBACK_CACHE = {}
 
-# Mirrors kBatchThreshold in frgfp/lpa/src/_solver.cpp. Below this many expansion
-# coefficients the C++ solver never selects the batched finite-difference
-# Jacobian, so its (non-disk-cacheable) Numba kernel is not compiled. The gate is
-# on the *total* number of coefficients, which already accounts for the tensor
-# structure: a 2D ansatz of order (n, n) has (n + 1)**2 coefficients, so it
-# crosses the same threshold at a much lower per-dimension order than a 1D
-# ansatz.
+# Mirrors kBatchThreshold in _solver.cpp: below this many coefficients the batched kernel is never used.
 _BATCH_THRESHOLD = 64
 
-# Mirrors kSensitivityThreshold in frgfp/lpa/src/_solver.cpp. Below this many
-# expansion coefficients the C++ solver never selects the rank-1 sensitivity
-# Jacobian, so the corresponding (expensive and non-disk-cacheable) Numba
-# kernels must not be compiled eagerly: on tiny problems that only adds
-# start-up latency for code that can never run. As above, the gate uses the
-# total coefficient count, independently of the invariant dimension.
+# Mirrors kSensitivityThreshold in _solver.cpp: below this many coefficients the rank-1 kernel is never used.
 _SENSITIVITY_THRESHOLD = 16
 
-# Mirrors kSensitivityParallelMinPoints in frgfp/lpa/src/_solver.cpp. Below this
-# many collocation points the C++ solver never selects the parallel sensitivity
-# kernel, so its unconditional warm-up (which spins up the OpenMP pool) can be
-# skipped. The warm-up is only needed to initialise Numba's threading layer
-# while the GIL is held, which matters exclusively for the parallel variant.
+# Mirrors kSensitivityParallelMinPoints in _solver.cpp: below this many points the parallel kernel is never used.
 _SENSITIVITY_PARALLEL_MIN_POINTS = 512
 
 def _validate_flow_signature(flowrhs_func):
-    """
-    Validate that the flow callable has the required ``(I, V, dV, ddV, params)`` signature.
-
-    Parameters
-    ----------
-    flowrhs_func : callable
-        The user-supplied flow right-hand side.
-
-    Raises
-    ------
-    TypeError
-        If ``flowrhs_func`` is not callable or does not accept five positional arguments.
-    """
+    """Validate the ``(I, V, dV, ddV, params)`` signature of the flow callable."""
     if not callable(flowrhs_func):
         raise TypeError(
             f"'flowrhs_func' must be callable. Received: {type(flowrhs_func).__name__}"
@@ -131,23 +82,7 @@ def _validate_flow_signature(flowrhs_func):
         )
 
 def _make_jitted(flowrhs_func, inline=False):
-    """
-    Numba-compile the flow function, falling back to no disk cache when needed.
-
-    Parameters
-    ----------
-    flowrhs_func : callable
-        The user-supplied flow right-hand side.
-    inline : bool, optional
-        When True, request ``inline='always'`` so that the hot batch and
-        sensitivity kernels do not pay a call boundary per point (this also lets
-        LLVM hoist loop-invariant work such as ``math.gamma`` out of the loops).
-
-    Returns
-    -------
-    numba.core.registry.CPUDispatcher
-        The lazily compiled flow function.
-    """
+    """Numba-compile the flow function, falling back to no disk cache when needed."""
     extra = {"inline": "always"} if inline else {}
     try:
         return nb.njit(flowrhs_func, fastmath=True, cache=True, **extra)
@@ -162,23 +97,7 @@ def _make_jitted(flowrhs_func, inline=False):
         return nb.njit(flowrhs_func, fastmath=True, **extra)
 
 def _make_scalar_callback(jitted_func, inv_dim, param_dim):
-    """
-    Compile the scalar (one flow evaluation per collocation point) C-callback.
-
-    Parameters
-    ----------
-    jitted_func : numba.core.registry.CPUDispatcher
-        The Numba-compiled flow function.
-    inv_dim : int
-        The invariant dimension (selects the 1D or multi-dimensional buffer layout).
-    param_dim : int
-        The number of flow parameters.
-
-    Returns
-    -------
-    numba.core.ccallback.CFunc
-        The compiled C-callback.
-    """
+    """Compile the scalar (one flow evaluation per collocation point) C-callback."""
     if inv_dim == 1:
         @cfunc(c_sig)
         def scalar_callback(I_ptr, V_ptr, dV_ptr, ddV_ptr, params_ptr, rhs_out_ptr, n_pts, i_dim):
@@ -207,21 +126,7 @@ def _make_scalar_callback(jitted_func, inv_dim, param_dim):
     return scalar_callback
 
 def _make_batch_callback(jitted_func, param_dim):
-    """
-    Compile the batched (one parallel launch for all perturbation columns) C-callback.
-
-    Parameters
-    ----------
-    jitted_func : numba.core.registry.CPUDispatcher
-        The Numba-compiled flow function.
-    param_dim : int
-        The number of flow parameters.
-
-    Returns
-    -------
-    numba.core.ccallback.CFunc
-        The compiled C-callback.
-    """
+    """Compile the batched (one parallel launch for all perturbation columns) C-callback."""
     # One prange launch evaluates every (point, coefficient-column) pair.
     @nb.njit(parallel=True, fastmath=True)
     def batch_kernel(I_arr, V_arr, dV_arr, ddV_arr, params_arr, rhs_arr):
@@ -252,42 +157,7 @@ def _make_batch_callback(jitted_func, param_dim):
     return batch_callback
 
 def _make_sensitivity_callbacks(jitted_func, param_dim, inv_dim, warm_parallel=True):
-    """
-    Compile the rank-1 Jacobian sensitivity kernels (serial and parallel).
-
-    The flow RHS is pointwise in ``(I, V, dV, ddV)``, so its Jacobian with
-    respect to the expansion coefficients is a sum of rank-1 (diagonal scaling)
-    terms::
-
-        J = diag(f_V) * M_val
-          + sum_a     diag(f_dV_a)   * M_grad_a
-          + sum_{a,b} diag(f_ddV_ab) * M_hess_ab
-
-    The scalar partial derivatives are obtained by central differences, which
-    needs ``2 * (1 + inv_dim + inv_dim**2)`` flow evaluations per collocation
-    point instead of the ``2 * n_coeffs`` evaluations of the finite-difference
-    Jacobian.  For ``inv_dim == 1`` that is 6 evaluations per point.
-
-    Parameters
-    ----------
-    jitted_func : numba.core.registry.CPUDispatcher
-        The Numba-compiled flow function.
-    param_dim : int
-        The number of flow parameters.
-    inv_dim : int
-        The invariant dimension.  ``1`` selects the flat scalar fast path; any
-        larger value uses the general tensor path.
-    warm_parallel : bool, optional
-        Whether to run the parallel kernel once with the GIL held.  The C++ side
-        only selects the parallel variant from ``_SENSITIVITY_PARALLEL_MIN_POINTS``
-        collocation points upwards, so the caller disables this for smaller
-        grids to avoid needlessly initialising Numba's threading layer.
-
-    Returns
-    -------
-    (serial_address, parallel_address) : tuple of int
-        Addresses of the serial and parallel sensitivity C-callbacks.
-    """
+    """Compile the rank-1 Jacobian sensitivity kernels (serial and parallel)."""
     if inv_dim != 1:
         return _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim, warm_parallel)
 
@@ -295,24 +165,7 @@ def _make_sensitivity_callbacks(jitted_func, param_dim, inv_dim, warm_parallel=T
 
 
 def _make_sensitivity_callbacks_1d(jitted_func, param_dim, warm_parallel=True):
-    """
-    Rank-1 sensitivity kernels for ``inv_dim == 1`` (flat scalar fast path).
-
-    Parameters
-    ----------
-    jitted_func : numba.core.registry.CPUDispatcher
-        The Numba-compiled flow function.
-    param_dim : int
-        The number of flow parameters.
-    warm_parallel : bool, optional
-        Run the parallel kernel once with the GIL held (see
-        ``_make_sensitivity_callbacks``).
-
-    Returns
-    -------
-    (serial_address, parallel_address) : tuple of int
-        Addresses of the serial and parallel sensitivity C-callbacks.
-    """
+    """Rank-1 sensitivity kernels for ``inv_dim == 1`` (flat scalar fast path)."""
     @nb.njit(fastmath=True)
     def sens_kernel_serial(I_arr, V_arr, dV_arr, ddV_arr, params_arr, fV, fdV, fddV):
         """Evaluate the flow sensitivities point-by-point (single-threaded)."""
@@ -381,14 +234,7 @@ def _make_sensitivity_callbacks_1d(jitted_func, param_dim, warm_parallel=True):
             nb.carray(fddV_ptr, n_pts),
         )
 
-    # Warm up the parallel runtime while the GIL is still held. This must happen
-    # here, at callback-construction time: the kernels are later invoked from C++
-    # with the GIL released (py::call_guard<py::gil_scoped_release>), and letting
-    # Numba's threading layer initialise in that context can deadlock. The C++
-    # solver only selects the parallel kernel from
-    # _SENSITIVITY_PARALLEL_MIN_POINTS collocation points upwards, so the caller
-    # skips the warm-up for smaller grids, where it would only spin up an idle
-    # OpenMP pool.
+    # Warm up the parallel runtime now, while the GIL is still held, to avoid a later deadlock.
     if warm_parallel:
         sens_kernel_parallel(
             np.full(1, 0.1), np.full(1, 0.1), np.full(1, 0.1), np.full(1, 0.1),
@@ -398,37 +244,7 @@ def _make_sensitivity_callbacks_1d(jitted_func, param_dim, warm_parallel=True):
     return serial_callback.address, parallel_callback.address
 
 def _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim, warm_parallel=True):
-    """
-    Rank-1 sensitivity kernels for ``inv_dim > 1`` (general tensor path).
-
-    ``dV`` is a length-``inv_dim`` vector and ``ddV`` an ``inv_dim`` x
-    ``inv_dim`` matrix at every collocation point, so the derivative set is
-    ``f_V`` (scalar), ``f_dV`` (vector) and ``f_ddV`` (matrix).  Every component
-    is finite-differenced independently, costing
-    ``2 * (1 + inv_dim + inv_dim**2)`` flow evaluations per point -- 14 for two
-    invariants, 26 for three -- against ``2 * n_coeffs`` for the
-    coefficient-space finite-difference Jacobian.
-
-    The scratch used to build the perturbed inputs is indexed by
-    ``numba.get_thread_id()`` in the parallel kernel, so nothing is allocated
-    inside the parallel loop and the buffers cannot race.
-
-    Parameters
-    ----------
-    jitted_func : numba.core.registry.CPUDispatcher
-        The Numba-compiled flow function.
-    param_dim : int
-        The number of flow parameters.
-    inv_dim : int
-        The invariant dimension (must be greater than one).
-    warm_parallel : bool, optional
-        Run the parallel kernel once with the GIL held (see the 1D path).
-
-    Returns
-    -------
-    (serial_address, parallel_address) : tuple of int
-        Addresses of the serial and parallel sensitivity C-callbacks.
-    """
+    """Rank-1 sensitivity kernels for ``inv_dim > 1`` (general tensor path)."""
     @nb.njit(fastmath=True, inline="always")
     def sens_point(i, I_arr, V_arr, dV_arr, ddV_arr, params_arr, fV, fdV, fddV,
                    dv_p, dv_m, ddv_p, ddv_m):
@@ -538,45 +354,7 @@ def _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim, warm_paralle
 def _build_callbacks(flowrhs_func, inv_dim, param_dim,
                      build_batch=True, build_sensitivity=True,
                      warm_parallel_sensitivity=True):
-    """
-    Build (and cache) the Numba C-callbacks bridging C++ to the flow equation.
-
-    Parameters
-    ----------
-    flowrhs_func : callable
-        The user-defined flow right-hand side ``(I, V, dV, ddV, params)``.
-    inv_dim : int
-        The invariant dimension; ``1`` additionally enables the batched
-        finite-difference callback.
-    param_dim : int
-        The number of flow parameters.
-    build_batch : bool, optional
-        Whether to compile the batched finite-difference kernel.  The C++ solver
-        only selects it for ``inv_dim == 1`` with
-        ``n_coeffs >= _BATCH_THRESHOLD``, so smaller problems pass ``False`` to
-        skip the (non-disk-cacheable) compilation.
-    build_sensitivity : bool, optional
-        Whether to compile the rank-1 sensitivity kernels.  The C++ solver only
-        selects them for ``n_coeffs >= _SENSITIVITY_THRESHOLD``, so smaller
-        problems pass ``False`` to skip the (non-disk-cacheable) compilation.
-    warm_parallel_sensitivity : bool, optional
-        Whether to warm up the parallel sensitivity kernel with the GIL held.
-        Only needed when the C++ solver can actually select it (a large enough
-        grid); ignored when ``build_sensitivity`` is false.
-
-    Returns
-    -------
-    (scalar_address, batch_address, sens_address, sens_par_address) : tuple of int
-        Addresses of the scalar, batched and (serial/parallel) rank-1 sensitivity
-        C-callbacks. ``batch_address`` is 0 unless ``inv_dim == 1`` and
-        ``build_batch`` is true; the sensitivity addresses are 0 unless
-        ``build_sensitivity`` is true.
-
-    Raises
-    ------
-    TypeError
-        If ``flowrhs_func`` has the wrong signature or cannot be JIT-compiled by Numba.
-    """
+    """Build (and cache) the Numba C-callbacks bridging C++ to the flow equation."""
     cache_key = (flowrhs_func, inv_dim, param_dim,
                  build_batch, build_sensitivity, warm_parallel_sensitivity)
     cached = _CALLBACK_CACHE.get(cache_key)
@@ -595,8 +373,7 @@ def _build_callbacks(flowrhs_func, inv_dim, param_dim,
             "signature (I, V, dV, ddV, params)."
         ) from exc
 
-    # An aggressively inlined variant removes the per-point call boundary in the
-    # hot kernels; fall back to the plain dispatcher when inlining is not possible.
+    # An aggressively inlined variant removes the per-point call boundary; fall back if unavailable.
     try:
         jitted_inline = _make_jitted(flowrhs_func, inline=True)
     except Exception:
@@ -624,21 +401,13 @@ def _build_callbacks(flowrhs_func, inv_dim, param_dim,
     sens_address = 0
     sens_par_address = 0
     if build_batch and inv_dim == 1:
-        # The batched finite-difference kernel assumes scalar dV/ddV layouts and
-        # therefore only exists for a single invariant. It is only compiled when
-        # the problem is large enough for the C++ solver to select it, so that
-        # small problems do not pay its (non-disk-cacheable) compilation cost.
+        # Batched kernel: inv_dim == 1 only, compiled above its coefficient gate.
         batch_address = _first_working(
             lambda jf: _make_batch_callback(jf, param_dim).address,
             "Batched Jacobian kernel",
         )
 
-    # The rank-1 sensitivity kernels work for any invariant dimension. They are
-    # only compiled when the problem is large enough for the C++ solver to select
-    # them (n_coeffs >= kSensitivityThreshold): for tiny problems doing so only
-    # adds start-up latency, because the kernels are closures and therefore
-    # cannot be disk-cached by Numba. The C++ side treats the resulting null
-    # callback pointers as "rank-1 path unavailable".
+    # Rank-1 kernels work for any inv_dim but are only compiled above the sensitivity gate.
     if build_sensitivity:
         sens_pack = _first_working(
             lambda jf: _make_sensitivity_callbacks(
@@ -669,10 +438,10 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
     flowrhs_func : callable
         A user-defined function that computes the right-hand side of the flow
         equation. It should accept arguments `(I, V, dV, ddV, params)`.
-    inv_dim : int, optional
-        The invariant dimension of the problem (default is 1).
-    param_dim : int, optional
-        The number of flow parameters (default is 2).
+    inv_dim : int
+        The invariant dimension of the problem.
+    param_dim : int
+        The number of flow parameters.
 
     Attributes
     ----------
@@ -686,7 +455,7 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         The number of flow parameters.
     """
 
-    def __init__(self, coll_grid, ansatz, flowrhs_func, inv_dim=1, param_dim=2):
+    def __init__(self, coll_grid, ansatz, flowrhs_func, inv_dim, param_dim):
         """
         Initialize the solver with a collocation grid, ansatz, and flow function.
 
@@ -699,10 +468,10 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         flowrhs_func : callable
             A user-defined function that computes the right-hand side of the flow
             equation. It should accept arguments `(I, V, dV, ddV, params)`.
-        inv_dim : int, optional
-            The invariant dimension of the problem (default is 1).
-        param_dim : int, optional
-            The number of flow parameters (default is 2).
+        inv_dim : int
+            The invariant dimension of the problem.
+        param_dim : int
+            The number of flow parameters.
         """
         if not isinstance(ansatz, _core_cpp.Ansatz):
             raise TypeError(
@@ -746,14 +515,7 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         self.inv_dim = inv_dim
         self.param_dim = param_dim
 
-        # The C++ solver only selects the auxiliary Jacobian kernels above fixed
-        # coefficient-count thresholds (kBatchThreshold, kSensitivityThreshold).
-        # Those gates are counted on the *total* number of coefficients, which
-        # already encodes the tensor structure -- a 2D ansatz of order (n, n) has
-        # (n + 1)**2 coefficients, so it reaches a threshold at a much lower
-        # per-dimension order than a 1D ansatz. Compiling (and warming up) a
-        # kernel that can never run only adds start-up latency, so the decision
-        # is taken here from ansatz.num_coeffs.
+        # Only build auxiliary kernels above the C++ coefficient gates (checked on ansatz.num_coeffs).
         num_coeffs = ansatz.num_coeffs
         build_batch = num_coeffs >= _BATCH_THRESHOLD
         build_sensitivity = num_coeffs >= _SENSITIVITY_THRESHOLD
@@ -777,7 +539,7 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
             self.inv_dim, self.param_dim
         )
 
-    def local_optimize(self, init_coeffs, maxiter=1000, tol=1e-6, flow_params=(3.95, 3), multithread=False):
+    def local_optimize(self, init_coeffs, flow_params, maxiter=1000, tol=1e-6, multithread=False):
         """
         Perform a local optimization of the expansion coefficients.
 
@@ -785,13 +547,13 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         ----------
         init_coeffs : list of float or np.ndarray
             Initial guess for the expansion coefficients.
+        flow_params : list or tuple or np.ndarray
+            Parameters required by the flow function.
         maxiter : int, optional
             Maximum number of Newton iterations (default is 1000).
         tol : float, optional
             Convergence tolerance for the Euclidean norm of the residual vector
             (default is 1e-6).
-        flow_params : list or tuple or np.ndarray, optional
-            Parameters required by the flow function (default is (3.95, 3)).
         multithread : bool, optional
             Whether to parallelise the compute-bound flow-evaluation kernels
             (the rank-1 sensitivity kernel, or the finite-difference callbacks
@@ -813,7 +575,7 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
             return FuncFromAnsatz(ansatz=self.ansatz, coeffs=result.coeffs)
         return None
 
-    def local_optimize_fixed_iterations(self, init_coeffs, num_iter=1, flow_params=(3.95, 3), multithread=False):
+    def local_optimize_fixed_iterations(self, init_coeffs, flow_params, num_iter=1, multithread=False):
         """
         Perform a fixed number of optimization steps without a tolerance-based
         stopping criterion.
@@ -826,10 +588,10 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         ----------
         init_coeffs : list of float or np.ndarray
             Initial guess for the expansion coefficients.
+        flow_params : list or tuple or np.ndarray
+            Parameters required by the flow function.
         num_iter : int, optional
             Exact number of iteration steps to perform (default is 1).
-        flow_params : list or tuple or np.ndarray, optional
-            Parameters required by the flow function (default is (3.95, 3)).
         multithread : bool, optional
             Whether to parallelise the compute-bound flow-evaluation kernels
             (the rank-1 sensitivity kernel, or the finite-difference callbacks
@@ -886,7 +648,7 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         
         return [FuncFromAnsatz(ansatz=self.ansatz, coeffs=res.coeffs) if res.success else None for res in cpp_results]
 
-    def multistart_optimize(self, init_coeffs_list, flow_params=(3.95, 3), maxiter=1000, tol=1e-6):
+    def multistart_optimize(self, init_coeffs_list, flow_params, maxiter=1000, tol=1e-6):
         """
         Perform a multistart optimization from multiple initial guesses.
 
@@ -894,8 +656,8 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         ----------
         init_coeffs_list : list of list or np.ndarray
             A list of initial coefficient vectors.
-        flow_params : list or tuple or np.ndarray, optional
-            Parameters required by the flow function (default is (3.95, 3)).
+        flow_params : list or tuple or np.ndarray
+            Parameters required by the flow function.
         maxiter : int, optional
             Maximum number of Newton iterations per start (default is 1000).
         tol : float, optional
