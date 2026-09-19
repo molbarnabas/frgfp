@@ -31,7 +31,7 @@ def _detect_version() -> str:
         return "0.0.0"
 
 # -- Project information -----------------------------------------------------
-project = "frgfp"
+project = "FRGfp"
 author = "Barnabas Molnar"
 copyright = "2026, Barnabas Molnar"
 
@@ -58,38 +58,31 @@ root_doc = "index"
 language = "en"
 
 # -- Options for HTML output -------------------------------------------------
+# Same theme as the SciPy documentation (pydata-sphinx-theme).
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_logo = "../../frgfp_logo.png"
+html_last_updated_fmt = "%b %d, %Y"
 
 html_theme_options = {
-    "navbar_start": ["navbar-logo"],
-    "navbar_center": ["navbar-nav"],
-    "navbar_end": ["navbar-icon-links"],
+    "header_links_before_dropdown": 6,
     "icon_links": [
         {
             "name": "GitHub",
             "url": "https://github.com/molbarnabas/frgfp",
             "icon": "fa-brands fa-github",
-            "type": "fontawesome",
         },
     ],
-    "show_toc_level": 2,
-    "navigation_with_keys": True,
-    "collapse_navigation": True,
-    "navigation_depth": 4,
-    "show_nav_level": 2,
-    "show_prev_next": True,
-    "search_bar_text": "Search the docs...",
-    "footer_start": ["copyright"],
-    "footer_center": ["sphinx-version"],
-    "footer_end": ["theme-version"],
+    "logo": {"text": "FRGfp"},
+    "navbar_start": ["navbar-logo"],
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
+    "navbar_persistent": [],
+    "secondary_sidebar_items": ["page-toc"],
 }
 
-html_context = {
-    "github_user": "molbarnabas",
-    "github_repo": "frgfp",
-    "github_version": "main",
+html_sidebars = {
+    "index": ["search-button-field"],
+    "**": ["search-button-field", "sidebar-nav-bs"],
 }
 
 # -- Options for autodoc -----------------------------------------------------

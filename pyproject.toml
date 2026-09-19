@@ -16,9 +16,10 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "pytest-benchmark",
-    "sphinx",
-    "pydata-sphinx-theme",
-    "numpydoc"
+    "sphinx>=5.0",
+    "pydata-sphinx-theme>=0.13",
+    "numpydoc",
+    "setuptools_scm",
 ]
 
 [tool.scikit-build]

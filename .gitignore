@@ -43,4 +43,4 @@ dist/
 # Sphinx documentation
 # ==========================================
 !doc/Makefile
-doc/source/reference/
+doc/source/api/generated/
