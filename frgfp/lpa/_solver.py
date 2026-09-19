@@ -69,9 +69,34 @@ sens_sig = types.void(
     types.intc
 )
 
-# Compiled callbacks are cached per (flow function, inv_dim, param_dim) so that
+# Compiled callbacks are cached per (flow function, inv_dim, param_dim,
+# build_batch, build_sensitivity, warm_parallel_sensitivity) so that
 # constructing many solvers does not recompile the expensive parallel kernel.
 _CALLBACK_CACHE = {}
+
+# Mirrors kBatchThreshold in frgfp/lpa/src/_solver.cpp. Below this many expansion
+# coefficients the C++ solver never selects the batched finite-difference
+# Jacobian, so its (non-disk-cacheable) Numba kernel is not compiled. The gate is
+# on the *total* number of coefficients, which already accounts for the tensor
+# structure: a 2D ansatz of order (n, n) has (n + 1)**2 coefficients, so it
+# crosses the same threshold at a much lower per-dimension order than a 1D
+# ansatz.
+_BATCH_THRESHOLD = 64
+
+# Mirrors kSensitivityThreshold in frgfp/lpa/src/_solver.cpp. Below this many
+# expansion coefficients the C++ solver never selects the rank-1 sensitivity
+# Jacobian, so the corresponding (expensive and non-disk-cacheable) Numba
+# kernels must not be compiled eagerly: on tiny problems that only adds
+# start-up latency for code that can never run. As above, the gate uses the
+# total coefficient count, independently of the invariant dimension.
+_SENSITIVITY_THRESHOLD = 16
+
+# Mirrors kSensitivityParallelMinPoints in frgfp/lpa/src/_solver.cpp. Below this
+# many collocation points the C++ solver never selects the parallel sensitivity
+# kernel, so its unconditional warm-up (which spins up the OpenMP pool) can be
+# skipped. The warm-up is only needed to initialise Numba's threading layer
+# while the GIL is held, which matters exclusively for the parallel variant.
+_SENSITIVITY_PARALLEL_MIN_POINTS = 512
 
 def _validate_flow_signature(flowrhs_func):
     """
@@ -226,7 +251,7 @@ def _make_batch_callback(jitted_func, param_dim):
     )
     return batch_callback
 
-def _make_sensitivity_callbacks(jitted_func, param_dim, inv_dim):
+def _make_sensitivity_callbacks(jitted_func, param_dim, inv_dim, warm_parallel=True):
     """
     Compile the rank-1 Jacobian sensitivity kernels (serial and parallel).
 
@@ -252,6 +277,11 @@ def _make_sensitivity_callbacks(jitted_func, param_dim, inv_dim):
     inv_dim : int
         The invariant dimension.  ``1`` selects the flat scalar fast path; any
         larger value uses the general tensor path.
+    warm_parallel : bool, optional
+        Whether to run the parallel kernel once with the GIL held.  The C++ side
+        only selects the parallel variant from ``_SENSITIVITY_PARALLEL_MIN_POINTS``
+        collocation points upwards, so the caller disables this for smaller
+        grids to avoid needlessly initialising Numba's threading layer.
 
     Returns
     -------
@@ -259,12 +289,12 @@ def _make_sensitivity_callbacks(jitted_func, param_dim, inv_dim):
         Addresses of the serial and parallel sensitivity C-callbacks.
     """
     if inv_dim != 1:
-        return _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim)
+        return _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim, warm_parallel)
 
-    return _make_sensitivity_callbacks_1d(jitted_func, param_dim)
+    return _make_sensitivity_callbacks_1d(jitted_func, param_dim, warm_parallel)
 
 
-def _make_sensitivity_callbacks_1d(jitted_func, param_dim):
+def _make_sensitivity_callbacks_1d(jitted_func, param_dim, warm_parallel=True):
     """
     Rank-1 sensitivity kernels for ``inv_dim == 1`` (flat scalar fast path).
 
@@ -274,6 +304,9 @@ def _make_sensitivity_callbacks_1d(jitted_func, param_dim):
         The Numba-compiled flow function.
     param_dim : int
         The number of flow parameters.
+    warm_parallel : bool, optional
+        Run the parallel kernel once with the GIL held (see
+        ``_make_sensitivity_callbacks``).
 
     Returns
     -------
@@ -351,17 +384,20 @@ def _make_sensitivity_callbacks_1d(jitted_func, param_dim):
     # Warm up the parallel runtime while the GIL is still held. This must happen
     # here, at callback-construction time: the kernels are later invoked from C++
     # with the GIL released (py::call_guard<py::gil_scoped_release>), and letting
-    # Numba's threading layer initialise in that context can deadlock. It is
-    # harmless for the single-threaded path -- the pool consumes no measurable CPU
-    # once idle -- so the warm-up is kept unconditional.
-    sens_kernel_parallel(
-        np.full(1, 0.1), np.full(1, 0.1), np.full(1, 0.1), np.full(1, 0.1),
-        np.full(param_dim, 0.1), np.zeros(1), np.zeros(1), np.zeros(1),
-    )
+    # Numba's threading layer initialise in that context can deadlock. The C++
+    # solver only selects the parallel kernel from
+    # _SENSITIVITY_PARALLEL_MIN_POINTS collocation points upwards, so the caller
+    # skips the warm-up for smaller grids, where it would only spin up an idle
+    # OpenMP pool.
+    if warm_parallel:
+        sens_kernel_parallel(
+            np.full(1, 0.1), np.full(1, 0.1), np.full(1, 0.1), np.full(1, 0.1),
+            np.full(param_dim, 0.1), np.zeros(1), np.zeros(1), np.zeros(1),
+        )
 
     return serial_callback.address, parallel_callback.address
 
-def _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim):
+def _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim, warm_parallel=True):
     """
     Rank-1 sensitivity kernels for ``inv_dim > 1`` (general tensor path).
 
@@ -385,6 +421,8 @@ def _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim):
         The number of flow parameters.
     inv_dim : int
         The invariant dimension (must be greater than one).
+    warm_parallel : bool, optional
+        Run the parallel kernel once with the GIL held (see the 1D path).
 
     Returns
     -------
@@ -488,15 +526,18 @@ def _make_sensitivity_callbacks_nd(jitted_func, param_dim, inv_dim):
         )
 
     # Warm up the parallel runtime while the GIL is still held (see the 1D path).
-    sens_kernel_parallel(
-        np.full((1, inv_dim), 0.1), np.full(1, 0.1), np.full((1, inv_dim), 0.1),
-        np.full((1, inv_dim, inv_dim), 0.1), np.full(param_dim, 0.1),
-        np.zeros(1), np.zeros((1, inv_dim)), np.zeros((1, inv_dim, inv_dim)),
-    )
+    if warm_parallel:
+        sens_kernel_parallel(
+            np.full((1, inv_dim), 0.1), np.full(1, 0.1), np.full((1, inv_dim), 0.1),
+            np.full((1, inv_dim, inv_dim), 0.1), np.full(param_dim, 0.1),
+            np.zeros(1), np.zeros((1, inv_dim)), np.zeros((1, inv_dim, inv_dim)),
+        )
 
     return serial_callback.address, parallel_callback.address
 
-def _build_callbacks(flowrhs_func, inv_dim, param_dim):
+def _build_callbacks(flowrhs_func, inv_dim, param_dim,
+                     build_batch=True, build_sensitivity=True,
+                     warm_parallel_sensitivity=True):
     """
     Build (and cache) the Numba C-callbacks bridging C++ to the flow equation.
 
@@ -509,19 +550,35 @@ def _build_callbacks(flowrhs_func, inv_dim, param_dim):
         finite-difference callback.
     param_dim : int
         The number of flow parameters.
+    build_batch : bool, optional
+        Whether to compile the batched finite-difference kernel.  The C++ solver
+        only selects it for ``inv_dim == 1`` with
+        ``n_coeffs >= _BATCH_THRESHOLD``, so smaller problems pass ``False`` to
+        skip the (non-disk-cacheable) compilation.
+    build_sensitivity : bool, optional
+        Whether to compile the rank-1 sensitivity kernels.  The C++ solver only
+        selects them for ``n_coeffs >= _SENSITIVITY_THRESHOLD``, so smaller
+        problems pass ``False`` to skip the (non-disk-cacheable) compilation.
+    warm_parallel_sensitivity : bool, optional
+        Whether to warm up the parallel sensitivity kernel with the GIL held.
+        Only needed when the C++ solver can actually select it (a large enough
+        grid); ignored when ``build_sensitivity`` is false.
 
     Returns
     -------
     (scalar_address, batch_address, sens_address, sens_par_address) : tuple of int
         Addresses of the scalar, batched and (serial/parallel) rank-1 sensitivity
-        C-callbacks. ``batch_address`` is 0 unless ``inv_dim == 1``.
+        C-callbacks. ``batch_address`` is 0 unless ``inv_dim == 1`` and
+        ``build_batch`` is true; the sensitivity addresses are 0 unless
+        ``build_sensitivity`` is true.
 
     Raises
     ------
     TypeError
         If ``flowrhs_func`` has the wrong signature or cannot be JIT-compiled by Numba.
     """
-    cache_key = (flowrhs_func, inv_dim, param_dim)
+    cache_key = (flowrhs_func, inv_dim, param_dim,
+                 build_batch, build_sensitivity, warm_parallel_sensitivity)
     cached = _CALLBACK_CACHE.get(cache_key)
     if cached is not None:
         return cached
@@ -566,21 +623,31 @@ def _build_callbacks(flowrhs_func, inv_dim, param_dim):
     batch_address = 0
     sens_address = 0
     sens_par_address = 0
-    if inv_dim == 1:
+    if build_batch and inv_dim == 1:
         # The batched finite-difference kernel assumes scalar dV/ddV layouts and
-        # therefore only exists for a single invariant.
+        # therefore only exists for a single invariant. It is only compiled when
+        # the problem is large enough for the C++ solver to select it, so that
+        # small problems do not pay its (non-disk-cacheable) compilation cost.
         batch_address = _first_working(
             lambda jf: _make_batch_callback(jf, param_dim).address,
             "Batched Jacobian kernel",
         )
 
-    # The rank-1 sensitivity kernels work for any invariant dimension.
-    sens_pack = _first_working(
-        lambda jf: _make_sensitivity_callbacks(jf, param_dim, inv_dim),
-        "Rank-1 sensitivity kernel",
-    )
-    if sens_pack:
-        sens_address, sens_par_address = sens_pack
+    # The rank-1 sensitivity kernels work for any invariant dimension. They are
+    # only compiled when the problem is large enough for the C++ solver to select
+    # them (n_coeffs >= kSensitivityThreshold): for tiny problems doing so only
+    # adds start-up latency, because the kernels are closures and therefore
+    # cannot be disk-cached by Numba. The C++ side treats the resulting null
+    # callback pointers as "rank-1 path unavailable".
+    if build_sensitivity:
+        sens_pack = _first_working(
+            lambda jf: _make_sensitivity_callbacks(
+                jf, param_dim, inv_dim,
+                warm_parallel=warm_parallel_sensitivity),
+            "Rank-1 sensitivity kernel",
+        )
+        if sens_pack:
+            sens_address, sens_par_address = sens_pack
 
     result = (scalar_address, batch_address, sens_address, sens_par_address)
     _CALLBACK_CACHE[cache_key] = result
@@ -679,10 +746,29 @@ class LPACollSolver(_lpa_cpp.LPACollSolver_cpp):
         self.inv_dim = inv_dim
         self.param_dim = param_dim
 
+        # The C++ solver only selects the auxiliary Jacobian kernels above fixed
+        # coefficient-count thresholds (kBatchThreshold, kSensitivityThreshold).
+        # Those gates are counted on the *total* number of coefficients, which
+        # already encodes the tensor structure -- a 2D ansatz of order (n, n) has
+        # (n + 1)**2 coefficients, so it reaches a threshold at a much lower
+        # per-dimension order than a 1D ansatz. Compiling (and warming up) a
+        # kernel that can never run only adds start-up latency, so the decision
+        # is taken here from ansatz.num_coeffs.
+        num_coeffs = ansatz.num_coeffs
+        build_batch = num_coeffs >= _BATCH_THRESHOLD
+        build_sensitivity = num_coeffs >= _SENSITIVITY_THRESHOLD
+        warm_parallel_sensitivity = (
+            build_sensitivity
+            and self.coll_grid.shape[0] >= _SENSITIVITY_PARALLEL_MIN_POINTS
+        )
+
         # Compile (or reuse cached) Numba C-callbacks for this flow function.
         (self._cfunc_address, self._batch_cfunc_address,
          self._sens_cfunc_address, self._sens_par_cfunc_address) = _build_callbacks(
-            flowrhs_func, self.inv_dim, self.param_dim)
+            flowrhs_func, self.inv_dim, self.param_dim,
+            build_batch=build_batch,
+            build_sensitivity=build_sensitivity,
+            warm_parallel_sensitivity=warm_parallel_sensitivity)
 
         super().__init__(
             self.coll_grid, self.ansatz,
