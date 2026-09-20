@@ -90,6 +90,8 @@ USER_ID=$(id -u) GROUP_ID=$(id -g) docker compose build
 docker compose up -d
 ```
 
+The same setup — including the VS Code dev container, the published ports and the build-cache volume — is described in the [installation documentation](doc/source/installation.rst).
+
 ## Quick example
 
 ```python

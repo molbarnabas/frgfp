@@ -99,3 +99,67 @@ Development
 The ``dev`` extra installs the package in editable mode together with the test,
 benchmark and documentation tooling, so no further ``pip`` step is needed before
 running the tests or building the documentation.
+
+.. _development-with-docker:
+
+Development with Docker
+-----------------------
+
+A ready-made Linux development container ships with the repository:
+``compose.yaml``, ``docker/Dockerfile``, the ``docker/dev.sh`` wrapper and the VS
+Code configuration in ``.devcontainer/``. It provides the complete toolchain -
+C++17 compiler, CMake, Ninja, Eigen3, OpenMP and git - together with every Python
+dependency (runtime, testing, documentation and notebook tooling), so nothing has
+to be installed on the host apart from Docker itself.
+
+.. code-block:: bash
+
+   ./docker/dev.sh build                  # build the image
+   ./docker/dev.sh up -d                  # start the container
+   ./docker/dev.sh exec dev bash          # open a shell inside it
+   ./docker/dev.sh down                   # stop it (add -v to drop the build cache)
+
+   # from inside the container
+   pytest                                         # run the test suite
+   make -C doc html                               # build the documentation
+   python -m http.server 8000 --directory doc/build/html
+
+How the container is wired
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The repository is bind-mounted at ``/workspace``, so container and host share one
+  working tree **and** one ``.git`` directory: edit and commit on the host, build
+  and test in the container.
+* On first start the entrypoint installs the package in editable mode, so Python
+  changes take effect immediately. Re-run ``pip install -e .`` after editing the
+  C++ sources under ``frgfp/_core`` or ``frgfp/lpa``.
+* ``doc/build`` lives inside the bind mount, so documentation generated in the
+  container is immediately available on the host (the preview server is reachable
+  at http://localhost:8000, published by ``compose.yaml``).
+* The CMake/scikit-build cache is kept in the named volume ``frgfp-build``
+  (mounted at ``/workspace/build``), so it never clashes with a ``build/``
+  directory produced on the host. Drop it with ``./docker/dev.sh down -v``.
+* Port 8888 is published for JupyterLab, which is handy for the notebook version
+  of the :doc:`usage` page (``examples/usage.ipynb``).
+
+The image creates a non-root user matching your UID and GID, so files created
+inside the container (build outputs, generated documentation, notebook outputs)
+stay owned by you. ``docker/dev.sh`` forwards those ids, refuses to run under
+``sudo`` (which would forward ``0/0``) and re-executes itself under ``sg docker``
+when your login session predates the ``docker`` group grant; if you are not in the
+``docker`` group at all it prints the ``usermod`` line to run.
+
+With VS Code, *Dev Containers: Reopen in Container* uses
+``.devcontainer/devcontainer.json``: it starts the same Compose service, opens
+``/workspace`` as the user ``dev``, selects ``/opt/venv/bin/python`` as the
+interpreter, enables pytest collection for the ``frgfp`` package and installs the
+Python, C++ and Jupyter extensions.
+
+If you prefer to drive Compose yourself, pass your UID/GID explicitly so that
+generated files are not owned by root:
+
+.. code-block:: bash
+
+   USER_ID=$(id -u) GROUP_ID=$(id -g) docker compose build
+   docker compose up -d
+   docker compose exec dev bash
