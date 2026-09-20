@@ -1,0 +1,23 @@
+{
+  "name": "FRGfp dev",
+  "dockerComposeFile": ["../compose.yaml"],
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "dev",
+  "postCreateCommand": "python -c 'import frgfp' || pip install -e .",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-vscode.cpptools",
+        "ms-toolsai.jupyter"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/opt/venv/bin/python",
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["frgfp"]
+      }
+    }
+  }
+}

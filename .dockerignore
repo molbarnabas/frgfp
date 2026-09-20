@@ -1,0 +1,13 @@
+# Keep the image build context small: only requirements.txt and docker/ are used.
+.git/
+build/
+doc/build/
+.pytest_cache/
+.benchmarks/
+.venv/
+__pycache__/
+*.py[cod]
+*.so
+sandbox/
+.vscode/
+.idea/

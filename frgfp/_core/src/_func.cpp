@@ -46,7 +46,12 @@ std::vector<Eigen::VectorXd> FuncFromAnsatz::evaluate_hess(const Eigen::MatrixXd
 Eigen::VectorXd fit_coeffs_from_grid(std::shared_ptr<Ansatz> ansatz, const Eigen::MatrixXd& grid, const Eigen::VectorXd& vals) {
     Eigen::MatrixXd M = ansatz->evaluate_basis(grid);
     
+    // Eigen 3.5 takes the SVD options as a template parameter, Eigen 3.4 as a runtime argument.
+#if EIGEN_VERSION_AT_LEAST(3, 4, 90)
     return M.bdcSvd<Eigen::ComputeThinU | Eigen::ComputeThinV>().solve(vals);
+#else
+    return M.bdcSvd(Eigen::ComputeThinU | Eigen::ComputeThinV).solve(vals);
+#endif
 }
 
 } // namespace core

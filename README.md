@@ -59,6 +59,31 @@ pip install -e .[dev]
 
 The `dev` extra installs the package in editable mode together with the test, benchmark and documentation tooling, so no further `pip` step is needed before running the tests or building the documentation.
 
+### Development with Docker
+
+A ready-made Linux development container is included (`compose.yaml` and `docker/Dockerfile`). It provides the full toolchain - C++17 compiler, CMake, Ninja, Eigen3, OpenMP and git - plus every Python dependency, so nothing else has to be installed on the host.
+
+```bash
+./docker/dev.sh build                    # build the image
+./docker/dev.sh up -d                    # start the container
+./docker/dev.sh exec dev bash            # open a shell inside it
+
+# from inside the container
+pip install -e .                         # editable install (done automatically on first start)
+pytest                                   # run the test suite
+make -C doc html                         # generate the documentation
+python -m http.server 8000 --directory doc/build/html
+```
+
+The repository is bind-mounted at `/workspace`, so the container and the host share one working tree **and** one `.git` directory: edit and commit on the host, build and test in the container. Because the mount covers the whole repository, `doc/build` is shared too - the HTML generated in the container is immediately available on the host at <http://localhost:8000>. The CMake/scikit-build cache is kept in a named volume (drop it with `./docker/dev.sh down -v`), so it never clashes with a `build/` directory produced on the host.
+
+If you prefer to drive `docker compose` directly, pass your UID/GID explicitly so generated files are not owned by root:
+
+```bash
+USER_ID=$(id -u) GROUP_ID=$(id -g) docker compose build
+docker compose up -d
+```
+
 ## Quick example
 
 ```python
