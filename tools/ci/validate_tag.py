@@ -6,12 +6,19 @@ place where "is this tag a legitimate release?" is decided.  It fails fast (and
 therefore stops the whole workflow) when
 
 * the tag does not have the form ``vX.Y.Z`` or ``vX.Y.ZrcN``,
-* a ``vX.Y.ZrcN`` tag is not an ancestor of the ``rc`` branch, or is already part
-  of ``main`` (release candidates belong to the ``rc`` branch),
+* a ``vX.Y.ZrcN`` tag is not an ancestor of the ``rc`` branch,
 * a final ``vX.Y.Z`` tag is not an ancestor of ``main``,
+* a ``vX.Y.ZrcN`` tag is created although the final ``vX.Y.Z`` tag already exists
+  (the candidate would be published *behind* the released version),
 * the version derived from the tag does not match the version ``setuptools_scm``
   reports for the checked-out commit (a tag that says ``0.2.0`` but builds a
   ``0.1.0`` wheel is the classic silent release bug).
+
+A release candidate whose commit is *also* reachable from ``main`` is only a
+warning: that simply means ``main`` was fast-forwarded to ``rc`` and no release
+has been tagged yet, which is a perfectly normal state right after merging the
+pipeline.  (Use ``git merge --no-ff`` when promoting ``rc`` to ``main`` if you
+prefer the two branch tips to stay distinct.)
 
 Usage::
 
@@ -143,6 +150,13 @@ def _version_key(value: str):
         return Version("0")
 
 
+def _final_tag_for(repo: Path, base: str) -> str | None:
+    """Return the final release tag ``v<base>`` when it already exists."""
+    tag = f"v{base}"
+    existing = _git(repo, "tag", "--list", tag, check=False).splitlines()
+    return tag if tag in existing else None
+
+
 def newer_tags(repo: Path, tag: str) -> list[str]:
     """Return release tags that sort strictly above *tag* (informational)."""
     current = _version_key(str(parse_tag(tag)["version"]))
@@ -188,28 +202,32 @@ def validate(tag: str, repo: Path, branch_check: bool = True) -> dict[str, str]:
             )
         print(f"setuptools_scm : {scm} (matches the tag)")
 
+    # A release candidate must never be published behind its own final release.
+    if is_prerelease:
+        final = _final_tag_for(repo, str(info["base"]))
+        if final:
+            _fail(
+                f"tag '{final}' already exists: '{tag}' would be published behind "
+                f"the final release.  Cut a new version instead (e.g. v{info['base']}rc2 "
+                f"is only meaningful before {final})."
+            )
+
     if branch_check:
         wanted = PRERELEASE_BRANCH if is_prerelease else RELEASE_BRANCH
         other = RELEASE_BRANCH if is_prerelease else PRERELEASE_BRANCH
-        kind = "Release candidates" if is_prerelease else "Final releases"
         if not _is_ancestor(repo, tag_commit, f"origin/{wanted}"):
             _fail(
                 f"tag '{tag}' must be reachable from the '{wanted}' branch, "
                 f"but it is not; tag the tip of '{wanted}'"
             )
+        print(f"branch         : reachable from origin/{wanted}")
         if _is_ancestor(repo, tag_commit, f"origin/{other}"):
-            # An rc tagged on a commit that `main` already contains would be
-            # released *behind* the final release, so that is an error.  A final
-            # release whose commit is also on `rc` is harmless: it simply means
-            # `main` was fast-forwarded from `rc` instead of merged.
-            message = (
-                f"tag '{tag}' is already part of '{other}'"
-                + ("" if is_prerelease else " (main was fast-forwarded from rc?)")
+            # Harmless in both directions: `main` fast-forwarded to `rc`, or a
+            # final release cut at the tip that was already merged into `rc`.
+            print(
+                f"::warning::tag '{tag}' is also reachable from '{other}' "
+                f"(expected when the branches share their tip)"
             )
-            if is_prerelease:
-                _fail(f"{message}; {kind} are tagged on '{wanted}'")
-            print(f"::warning::{message}")
-        print(f"branch         : reachable from origin/{wanted}, not from origin/{other}")
 
         stale = newer_tags(repo, tag)
         if stale:

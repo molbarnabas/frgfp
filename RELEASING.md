@@ -52,21 +52,61 @@ current NumPy, which the test environment has to install.
 
 ### 1. GitHub repository settings
 
-* **Settings → Pages** → *Build and deployment* → Source: **Deploy from a branch**,
-  branch **`gh-pages`**, folder **`/ (root)`**. The branch is created
-  automatically by the first docs deployment.
-* **Settings → Actions → General → Workflow permissions**: *Read repository
-  contents*. The docs jobs opt into `contents: write` themselves, which is enough
-  to push `gh-pages`.
+Do these **after** the pipeline has been merged into `main` (your default branch):
+GitHub only shows the *Run workflow* button for workflows that exist on the
+default branch, and the Pages branch dropdown only lists branches that already
+exist.
+
+* **Settings → Actions → General → Workflow permissions**: **Read and write
+  permissions**. This is what allows the docs jobs to push `gh-pages` and the
+  release job to create the GitHub release; with the restricted setting they fail
+  with a 403.
 * **Settings → Branches → rulesets** for `main` and `rc`: require a pull request,
   require the status check **`ci`**, require branches to be up to date, and block
-  force-pushes.
+  force-pushes. The `ci` check only appears in the list after `ci.yml` has run
+  once, so open any pull request first.
 * **Settings → Environments** → create **`pypi`** and **`testpypi`**, and add
   yourself under *Required reviewers*. This is the manual approval that makes the
   publication "half automatic": everything is built, tested and documented
   automatically, and the upload waits for one click.
 
-### 2. PyPI account and trusted publishing (no tokens)
+### 2. First-time GitHub Pages setup
+
+`gh-pages` does not exist until the first documentation deployment creates it, so
+the Pages dropdown will only offer `main`/`develop`/`rc` at the beginning. The
+order is:
+
+1. *Actions → **Docs preview (dev)** → Run workflow* — this is the cheapest way to
+   materialise the branch. It creates an orphan `gh-pages` branch (no source
+   files) containing `index.html`, `switcher.json`, `versions.json` and
+   `.nojekyll`, and publishes the `/dev/` preview. The site root redirects to
+   `/dev/` until the first final release exists.
+2. Refresh *Settings → Pages* → *Build and deployment* → Source: **Deploy from a
+   branch**, branch **`gh-pages`**, folder **`/ (root)`**.
+3. Check <https://molbarnabas.github.io/frgfp/> — it should redirect to `/dev/`.
+   From now on every release adds its own directory and `/latest/` follows the
+   newest final release; the Pages settings never need touching again.
+
+If you would rather not publish a `/dev/` preview at all, create the branch from a
+throwaway clone instead (your working tree stays untouched) and let the first
+release fill it:
+
+```bash
+git clone --no-checkout git@github.com:molbarnabas/frgfp.git /tmp/frgfp-pages
+cd /tmp/frgfp-pages
+git checkout --orphan gh-pages
+printf '<!doctype html><meta http-equiv="refresh" content="0;url=latest/"><title>FRGfp docs</title>\n' > index.html
+: > .nojekyll
+git add index.html .nojekyll
+git commit -m "docs: initialise gh-pages"
+git push origin gh-pages
+```
+
+Do **not** create `gh-pages` from the GitHub UI off `main`/`rc`: the UI branches
+from an existing ref, so the published branch would contain the whole source tree
+(served as part of your documentation site).
+
+### 3. PyPI account and trusted publishing (no tokens)
 
 1. Create an account on <https://pypi.org> and one on <https://test.pypi.org>
    (they are separate), and verify both e-mail addresses.
@@ -138,8 +178,12 @@ TestPyPI upload).
 ### Rules the pipeline enforces for you
 
 * Only `vX.Y.Z` and `vX.Y.ZrcN` tags trigger a release (alpha/beta-style tags are
-  ignored). The tag must be reachable from `rc` (pre-release) or `main` (final),
-  and must not already be part of the other branch.
+  ignored). A candidate must be reachable from `rc`, a final release from `main`.
+* A `vX.Y.ZrcN` tag is refused when the final `vX.Y.Z` tag already exists — a
+  candidate published behind its own release would only confuse `pip` users.
+* A tag whose commit is reachable from both branches is accepted with a warning:
+  that is what a fast-forwarded `main` looks like. (Use `git merge --no-ff` when
+  promoting `rc` to `main` if you want the branch tips to stay distinct.)
 * The version `setuptools_scm` derives for the commit must equal the tag, and
   every wheel filename is checked against it before it becomes an artefact.
 * A version can never be uploaded twice, so a broken release needs a new tag
@@ -174,10 +218,13 @@ python tools/ci/deploy_docs.py --pages-dir /tmp/pages --html-dir /tmp/frgfp-docs
 | `403 invalid-publisher` on upload | The pending publisher's owner/repo/workflow/environment do not match `release.yml`, or the job did not request `id-token: write`. |
 | `tag ... is not a release tag` | Tags must be `vX.Y.Z` or `vX.Y.ZrcN`. |
 | `must be reachable from the 'rc' branch` | The tag points at a commit that is not an ancestor of `origin/rc`; tag the branch tip instead. |
+| `vX.Y.ZrcN` refused because `vX.Y.Z` already exists | The candidate would be published behind its final release; cut a new version instead. |
+| `could not push to the documentation branch` (403) | *Settings → Actions → General → Workflow permissions* must be **Read and write permissions**; also check that no branch ruleset blocks `gh-pages`, and that the `--branch` name matches the Pages setting. |
 | Wheel version mismatch | The tag is not on the checked-out commit (`fetch-depth: 0` + `fetch-tags: true` matter), or a stale `build/` directory leaked into the build. |
 | macOS build fails on `omp.h` / `libomp` | `brew install libomp` — `CMakeLists.txt` locates the keg by itself, and the workflow installs it. |
 | `No threading layer could be loaded` on macOS | numba needs an OpenMP runtime at run time; the macOS test environment already adds Homebrew's `libomp` to `DYLD_FALLBACK_LIBRARY_PATH`. |
 | `/latest/` did not update | The tag was a release candidate, or it is older than the recorded `latest` (see the warning in the docs job log). |
-| The docs job cannot push `gh-pages` | Pages is not configured for the `gh-pages` branch, or the job lost its `contents: write` permission. |
+| `gh-pages` is missing from the Pages branch dropdown | It does not exist yet — see *First-time GitHub Pages setup* above; the first docs deployment creates it. |
+| The *Run workflow* button is missing for Release / Docs preview | `workflow_dispatch` only lists workflows that exist on the **default branch** (`main`); merge the pipeline there first. |
 | The PyPI publish step is skipped | It waits for the `pypi`/`testpypi` environment approval (add yourself as a required reviewer), and it only runs after the wheels, sdist, docs and GitHub release all succeeded. If the docs deploy failed, fix it and use *Re-run failed jobs*. |
 

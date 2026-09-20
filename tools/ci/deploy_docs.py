@@ -52,6 +52,17 @@ SWITCHER_FILE = "switcher.json"
 VERSIONS_FILE = "versions.json"
 INDEX_FILE = "index.html"
 
+#: Printed when the push to the documentation branch is rejected.  A read-only
+#: workflow token is by far the most common cause.
+PUSH_HINT = (
+    "could not push to the documentation branch. Check that (1) Settings -> "
+    "Actions -> General -> Workflow permissions is set to 'Read and write "
+    "permissions' so that the workflow token may push, (2) the branch is not "
+    "protected by a ruleset that forbids pushes, and (3) the branch name passed "
+    "to --branch matches the branch configured under Settings -> Pages "
+    "('Deploy from a branch')."
+)
+
 
 def _fail(message: str) -> None:
     """Report *message* as a GitHub annotation and exit non-zero."""
@@ -280,7 +291,16 @@ def commit_and_push(
     if no_push:
         print("git            : push skipped (--no-push)")
         return
-    _git(pages_dir, "push", "origin", f"HEAD:{branch}")
+    push = subprocess.run(
+        ["git", "push", "origin", f"HEAD:{branch}"],
+        cwd=pages_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if push.returncode != 0:
+        print(push.stderr.strip() or push.stdout.strip())
+        _fail(PUSH_HINT)
     print(f"git            : pushed to origin/{branch}")
 
 
