@@ -323,6 +323,23 @@ jobs:
     permissions:
       contents: write
     steps:
+      # `gh` is not a pure API client: `gh release create/upload/view` resolves
+      # OWNER/REPO from the git remotes, and `create` additionally inspects the
+      # local tag (`git tag --list ... --format=%(contents)`) and, when it has to
+      # build a changelog, the local history.  Without a working copy every one
+      # of those subprocesses fails with
+      #   failed to run git: fatal: not a git repository (or any of the parent
+      #   directories): .git
+      # so this job cannot be the one job without a checkout.  It must sit
+      # *before* the download below: actions/checkout cleans the workspace with
+      # `git clean -ffdx`, which would delete the downloaded `dist/` tree (it is
+      # gitignored).
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
       - name: Fetch every artefact
         uses: actions/download-artifact@v8
         with:

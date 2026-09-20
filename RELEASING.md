@@ -287,6 +287,27 @@ straight from a tag — and if a publication is rejected, fix the publisher on P
 and use *Re-run failed jobs*, which reuses the artefacts of that run instead of
 rebuilding them.
 
+### Fixing a release candidate whose run failed inside the pipeline
+
+*Re-run failed jobs* replays the workflow file **of that run's own commit**, so it
+keeps working only while the YAML is unchanged. If the fix lives anywhere under
+`.github/workflows/`, the re-run repeats the old failure. A pre-release tag is
+then not worth preserving — move it onto the fixed commit and push it again:
+
+```bash
+git switch rc && git pull --ff-only    # the fixed workflow must be at the rc tip
+git tag -d v0.1.0rc1                   # drop the local tag ...
+git push origin :refs/tags/v0.1.0rc1   # ... and the remote one, otherwise the
+                                       # re-push below is a non-fast-forward
+git tag -a v0.1.0rc1 -m "0.1.0rc1"
+git push origin v0.1.0rc1
+```
+
+This is allowed because the candidate was never published: PyPI only ever sees the
+artefacts after your approval, and the guard accepts a tag whose branch rule still
+holds. A *final* tag must never be moved — the files are already immutable on
+PyPI; fix the guard's complaint and cut the next patch version instead.
+
 ### Rules the pipeline enforces for you
 
 * Only `vX.Y.Z` and `vX.Y.ZrcN` tags trigger a release (alpha/beta-style tags are
@@ -356,4 +377,6 @@ fixes it for the real matrix too.
 | The *Run workflow* button is missing for Release / Docs preview | `workflow_dispatch` only lists workflows that exist on the **default branch** (`main`); tag-driven releases still work without that merge, and the buttons appear after the first `rc` → `main` promotion. |
 | The publish job did not wait for approval | The `pypi`/`testpypi` environment referenced by the workflow did not exist yet, so GitHub created it *without* protection rules. Create it under *Settings → Environments* with yourself as a required reviewer, then re-run the job. |
 | The PyPI publish step is skipped | It waits for the `pypi`/`testpypi` environment approval (add yourself as a required reviewer), and it only runs after the wheels, sdist, docs and GitHub release all succeeded. If the docs deploy failed, fix it and use *Re-run failed jobs*. |
+| `failed to run git: fatal: not a git repository` in the *github release* job | `gh release create/upload/view` is not a pure API client: it resolves owner/repo from the git remotes and inspects the local tag, so the job needs a working copy. It checks out `needs.validate.outputs.tag` *before* downloading the artefacts — keep that order, because `actions/checkout` cleans the workspace with `git clean -ffdx` and would delete the gitignored `dist/` tree. |
+| A run fails in a job that was fixed afterwards, and *Re-run failed jobs* reproduces it | A re-run replays the workflow file of the run's own commit; move the tag (see *Fixing a release candidate whose run failed inside the pipeline*) or dispatch the existing tag once the workflow is on the default branch. |
 
