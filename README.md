@@ -82,6 +82,14 @@ print(vals)
 
 Fixed points of LPA flow equations are found with `frgfp.lpa.LPACollSolver`; see the documentation for a complete example.
 
+## Examples
+
+A complete, runnable walkthrough of the whole public API — the O(N) Wilson–Fisher flow at order $\mathcal{O}(\bar{\rho}^8)$ in the local potential approximation — is available as a Jupyter notebook:
+
+- [`examples/usage.ipynb`](examples/usage.ipynb) — basis expansions, collocation grids, function expansions and the LPA fixed-point solver, including a comparison of the fixed point with the perturbative input.
+
+The same content is rendered in the [usage section](doc/source/usage.rst) of the documentation.
+
 ## Documentation
 
 The Sphinx documentation in `doc/` is generated from the NumPy-style docstrings in the source code. The documentation tooling is provided by the `dev` extra:

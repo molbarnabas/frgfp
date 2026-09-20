@@ -7,6 +7,9 @@ runnable example: the O(N) Wilson-Fisher flow at order
 snippets below are meant to be read in order; together they form a single
 script.
 
+A Jupyter notebook version of this page is available in
+``examples/usage.ipynb`` in the repository.
+
 The flow equation
 -----------------
 
@@ -74,7 +77,7 @@ least-squares problem through Eigen's SVD pseudo-inverse:
 
 .. code-block:: python
 
-   def high_perturb(rho):
+   def perturb(rho):
        """Perturbative profile used as the initial guess."""
        return (-0.341419 * rho + 0.876914 * rho**2 + 1.45014 * rho**3
                + 1.5513 * rho**4 - 0.167052 * rho**5 - 1.55923 * rho**6
@@ -82,7 +85,7 @@ least-squares problem through Eigen's SVD pseudo-inverse:
 
 
    fit = frgfp.FuncFromAnsatz.from_grid(
-       ansatz=ansatz, grid=fit_grid, vals=high_perturb(fit_grid))
+       ansatz=ansatz, grid=fit_grid, vals=perturb(fit_grid))
 
    print(fit.num_coeffs, fit.coeffs.shape)      # 9 (9,)
    print(fit.evaluate(fit_grid))                # V on the fit grid
