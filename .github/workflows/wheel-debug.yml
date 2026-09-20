@@ -1,0 +1,74 @@
+name: Wheel debug (single target)
+
+# Manual, single-cell build+test used while iterating on the wheel pipeline.  It
+# is deliberately separate from ci.yml so that a debug run never posts the
+# required `ci` status check on a pull request, and it reuses the same
+# configuration from pyproject.toml, so what you debug is what CI builds.
+#
+# Examples:
+#   os: macos-latest     archs: arm64    python: 310   -> the macOS delocate path
+#   os: macos-26-intel   archs: x86_64   python: 312
+#   os: ubuntu-24.04     archs: x86_64   python: 314
+#   os: windows-2022     archs: AMD64    python: 310
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        description: "Runner label"
+        required: true
+        default: "macos-latest"
+      archs:
+        description: "CIBW_ARCHS for that runner (arm64, x86_64, AMD64, aarch64)"
+        required: true
+        default: "arm64"
+      python:
+        description: "CPython to build/test (310, 311, 312, 313, 314)"
+        required: true
+        default: "312"
+
+permissions:
+  contents: read
+
+env:
+  CIBW_CACHE_PATH: ${{ github.workspace }}/.cibuildwheel-cache
+
+jobs:
+  wheel:
+    name: wheel · ${{ inputs.os }} · cp${{ inputs.python }}
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Cache cibuildwheel's tool downloads
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.CIBW_CACHE_PATH }}
+          key: cibw-debug-${{ inputs.os }}-${{ hashFiles('pyproject.toml') }}
+
+      - name: Provide an OpenMP runtime (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew list libomp >/dev/null 2>&1 || brew install libomp
+          echo "OpenMP_ROOT=$(brew --prefix libomp)" >> "$GITHUB_ENV"
+
+      - name: Build the wheel and run pytest
+        uses: pypa/cibuildwheel@v4.2.1
+        env:
+          CIBW_BUILD: cp${{ inputs.python }}-*
+          CIBW_ARCHS: ${{ inputs.archs }}
+
+      - name: Upload the wheel
+        uses: actions/upload-artifact@v7
+        with:
+          name: debug-wheel-${{ inputs.os }}-cp${{ inputs.python }}
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error

@@ -30,6 +30,7 @@ candidates get their own documentation directory and their own switcher entry
 | `.github/workflows/ci.yml` | PR into `rc`/`main`, push to `rc`/`main` | Builds and tests a wheel for **every** platform × CPython combination (Linux x86_64 & aarch64, macOS arm64 & x86_64, Windows AMD64 × 3.10–3.14), builds the sdist and installs/tests it, builds the docs with `-W`. The single aggregate job **`ci`** is the status check to require in branch protection. |
 | `.github/workflows/release.yml` | tag `vX.Y.Z` / `vX.Y.ZrcN`, or manual dispatch | Validates the tag, builds/tests all wheels + sdist, runs the benchmark suite, publishes the docs to GitHub Pages, creates the GitHub release, and — after a human approves the `pypi` environment — uploads the wheels and sdist to PyPI. |
 | `.github/workflows/docs-dev.yml` | push to `develop` | Publishes the development preview to `/dev/`. Delete this file if you do not want it. |
+| `.github/workflows/wheel-debug.yml` | manual | Builds and tests **one** wheel for a chosen runner/CPython using the same `pyproject.toml` configuration, so a problem can be iterated on in minutes without re-running the full matrix. It never posts the required `ci` check. |
 
 The tests that gate a PR are exactly the tests that gate a release: cibuildwheel
 installs the freshly built wheel into a clean virtual environment and runs
@@ -195,9 +196,11 @@ TestPyPI upload).
 ## Verifying locally before pushing
 
 ```bash
-# build and test exactly the way CI does, on this machine, in the build container
-pip install cibuildwheel
-cibuildwheel --only cp312-manylinux_x86_64 .
+# the exact build CI does on Linux: CIBW_BUILD is what decides the platform
+# identifiers - `--only cp312-manylinux_x86_64` would hide musllinux and any
+# other identifier, so always check the list first
+cibuildwheel --platform linux --print-build-identifiers
+CIBW_BUILD=cp312-* cibuildwheel --platform linux .
 
 # the sdist and the wheel
 python -m build
@@ -211,6 +214,11 @@ python tools/ci/deploy_docs.py --pages-dir /tmp/pages --html-dir /tmp/frgfp-docs
     --version 0.2.0rc1 --dry-run
 ```
 
+To iterate on a platform-specific problem, run *Actions → **Wheel debug (single
+target)** → Run workflow* with e.g. `os: macos-latest`, `archs: arm64`,
+`python: 310`. It uses the same `pyproject.toml` settings, so fixing it there
+fixes it for the real matrix too.
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |
@@ -222,6 +230,9 @@ python tools/ci/deploy_docs.py --pages-dir /tmp/pages --html-dir /tmp/frgfp-docs
 | `could not push to the documentation branch` (403) | *Settings → Actions → General → Workflow permissions* must be **Read and write permissions**; also check that no branch ruleset blocks `gh-pages`, and that the `--branch` name matches the Pages setting. |
 | Wheel version mismatch | The tag is not on the checked-out commit (`fetch-depth: 0` + `fetch-tags: true` matter), or a stale `build/` directory leaked into the build. |
 | macOS build fails on `omp.h` / `libomp` | `brew install libomp` — `CMakeLists.txt` locates the keg by itself, and the workflow installs it. |
+| macOS fails in `delocate-wheel` | delocate must locate Homebrew's `libomp`; `[tool.cibuildwheel.macos].repair-wheel-command` therefore sets `DYLD_LIBRARY_PATH` (SIP strips it from the environment, so it must be set inside the command — cibuildwheel #816). If the error is instead *"library dependencies do not satisfy target MacOS"*, the Homebrew library targets a newer macOS than the wheel: raise `MACOSX_DEPLOYMENT_TARGET` in `[tool.cibuildwheel.macos.environment]` (the wheel then requires that macOS version) or build OpenMP for the target. |
+| `pip install …musllinux…` fails / numba has no wheels | musllinux builds are skipped on purpose: numba publishes no musllinux wheels, so the test environment would have to compile llvmlite and LLVM. Do not remove `*-musllinux*` from `skip` without a full LLVM toolchain. |
+| Only some matrix cells fail, and the log is long | Use *Wheel debug (single target)* with the failing runner/CPython; it runs the same configuration in isolation. |
 | `No threading layer could be loaded` on macOS | numba needs an OpenMP runtime at run time; the macOS test environment already adds Homebrew's `libomp` to `DYLD_FALLBACK_LIBRARY_PATH`. |
 | `/latest/` did not update | The tag was a release candidate, or it is older than the recorded `latest` (see the warning in the docs job log). |
 | `gh-pages` is missing from the Pages branch dropdown | It does not exist yet — see *First-time GitHub Pages setup* above; the first docs deployment creates it. |

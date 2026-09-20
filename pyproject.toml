@@ -65,9 +65,11 @@ addopts = "-ra"
 # separately and archives their JSON as an artifact.
 [tool.cibuildwheel]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
-# 32-bit platforms have no numba wheels, and free-threaded builds are not a
-# supported numba target yet.
-skip = ["*-win32", "*-manylinux_i686", "*-musllinux_i686", "cp314t-*"]
+# 32-bit platforms have no numba wheels, free-threaded builds are not a supported
+# numba target yet, and musllinux is skipped deliberately: numba publishes no
+# musllinux wheels at all, so a musllinux wheel could not be installed (or tested)
+# without building llvmlite and LLVM from source.
+skip = ["*-win32", "*-manylinux_i686", "*-musllinux*", "cp314t-*"]
 test-extras = ["test"]
 test-command = 'python -m pytest --pyargs frgfp -m "not benchmark" -q'
 
@@ -83,6 +85,16 @@ manylinux-aarch64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.macos]
 archs = ["auto"]
+# Homebrew's libomp is a dynamic library that our extension links against, so
+# delocate has to find it to bundle it into the wheel.  macOS strips
+# DYLD_LIBRARY_PATH from the environment before delocate runs, so it is set
+# inside the repair command instead (the documented workaround for
+# pypa/cibuildwheel#816).  Both possible keg prefixes are listed; delocate
+# ignores the ones that do not exist.
+repair-wheel-command = """\
+DYLD_LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:/usr/local/opt/libomp/lib \
+delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}\
+"""
 # numba's OpenMP threading layer (selected in frgfp/lpa/_solver.py) needs an
 # OpenMP runtime at *run* time.  Homebrew's libomp is keg-only, so point the
 # dynamic loader at both possible keg prefixes (Apple Silicon and Intel); dyld
