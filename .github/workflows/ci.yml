@@ -65,22 +65,37 @@ jobs:
             ~/frgfp-libomp-tarball
           key: cibw-${{ matrix.runner.name }}-${{ hashFiles('pyproject.toml', 'tools/ci/build_libomp.sh') }}
 
-      - name: Provide an OpenMP runtime for the tests (macOS)
+      - name: Prepare the macOS OpenMP runtime
         if: runner.os == 'macOS'
         shell: bash
-        # The wheel bundles the libomp built by before-all, but numba's OpenMP
-        # threading layer resolves its own OpenMP runtime through the dynamic
-        # loader paths at *test* time.  cibuildwheel has no option for test-only
-        # environment variables, so the path is exported for the whole job.
+        # The build links the libomp that before-all compiled for the wheel's
+        # deployment target and delocate bundles it into the wheel; the Homebrew
+        # keg is installed only as the fallback for the build (CMakeLists.txt).
+        #
+        # The tests must never load a *second* OpenMP runtime: the extension
+        # loads the bundled one, and if numba's omp layer additionally dlopens
+        # Homebrew's copy, the OpenMP runtime aborts the whole process ("OMP:
+        # Error #15 ... already initialized", which the runner reports as exit
+        # code -6).  Pinning numba to its dependency-free workqueue layer keeps
+        # exactly one runtime in the process; frgfp/lpa/_solver.py honours an
+        # explicit NUMBA_THREADING_LAYER.
         run: |
           brew list libomp >/dev/null 2>&1 || brew install libomp
-          echo "DYLD_FALLBACK_LIBRARY_PATH=$HOME/frgfp-libomp/lib:$(brew --prefix libomp)/lib:/usr/local/lib:/usr/lib" >> "$GITHUB_ENV"
+          echo "NUMBA_THREADING_LAYER=workqueue" >> "$GITHUB_ENV"
 
       - name: Build the wheel and run pytest
         uses: pypa/cibuildwheel@v4.2.1
         env:
           CIBW_BUILD: cp${{ matrix.python }}-*
           CIBW_ARCHS: ${{ matrix.runner.archs }}
+          # macOS only: report a failing test run as a GitHub annotation.
+          # Annotations are readable without repository admin rights, so the real
+          # error is visible on the pull request rather than only in the
+          # (admin-only) job log.
+          CIBW_TEST_COMMAND_MACOS: >-
+            log=$(mktemp); python -m pytest --pyargs frgfp -m "not benchmark" -q >"$log" 2>&1
+            || { cat "$log"; echo "::error::pytest failed: $(tail -n 5 "$log" | tr '\n' ' ')"; exit 1; };
+            cat "$log"
 
       - name: Upload the wheel
         uses: actions/upload-artifact@v7

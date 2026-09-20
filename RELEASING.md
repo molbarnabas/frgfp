@@ -57,6 +57,18 @@ recipe, pinned by version and checksum) and the build links and bundles that cop
 The result is cached between jobs, so the ~2 minute build happens once per runner
 and cache key.
 
+On macOS exactly **one** OpenMP runtime may be present in a test process. The wheel
+already loads its bundled copy, so the macOS test steps pin numba to its
+dependency-free `workqueue` threading layer (`NUMBA_THREADING_LAYER=workqueue`)
+instead of letting it `dlopen` a second copy from Homebrew: the OpenMP runtime
+treats multiple copies as fatal and aborts the process, which the runners report as
+exit code `-6` (SIGABRT, `OMP: Error #15 … already initialized`). The C++ OpenMP
+backend is still exercised — only numba's parallel kernels run serially in CI. To
+also exercise numba's OpenMP layer there, point `DYLD_FALLBACK_LIBRARY_PATH` at the
+`frgfp/.dylibs` directory *inside the installed wheel*, so that numba resolves
+`libomp.dylib` to the same file the extension already loaded and dyld keeps a single
+image.
+
 
 ## One-time setup
 
@@ -240,7 +252,9 @@ fixes it for the real matrix too.
 | Wheel version mismatch | The tag is not on the checked-out commit (`fetch-depth: 0` + `fetch-tags: true` matter), or a stale `build/` directory leaked into the build. |
 | macOS build fails on `omp.h` / `libomp` | `brew install libomp` — `CMakeLists.txt` locates the keg by itself, and the workflow installs it. |
 | macOS fails in `delocate-wheel` | The repair command echoes delocate's error as a `::error::` annotation, so the message appears on the pull request. macOS labels the wheel macOS 11+ and `tools/ci/build_libomp.sh` builds the OpenMP runtime for exactly that target; if the annotation reports a *different* version, align `MACOSX_DEPLOYMENT_TARGET` in `[tool.cibuildwheel.macos].environment` with `FRGFP_LIBOMP_DEPLOYMENT_TARGET`. |
-| macOS `build_libomp.sh` fails | The script is cached and idempotent: delete `~/frgfp-libomp` and `~/frgfp-libomp-src` (or change `hashFiles('tools/ci/build_libomp.sh')` in the cache key) to force a rebuild; the LLVM tarball is checksum-verified, so a truncated download fails loudly. |
+| macOS test step fails with exit code `-6` | SIGABRT from the OpenMP runtime (`OMP: Error #15 … already initialized`): a second OpenMP runtime was loaded. The macOS steps already pin `NUMBA_THREADING_LAYER=workqueue` for exactly this reason; do not put another `libomp` on the dynamic loader path. |
+| Test failures are hard to see | The macOS `test-command` echoes the failing run as a `::error::pytest failed: …` annotation, and the repair step does the same for delocate — both are visible on the pull request without downloading logs. |
+| macOS `build_libomp.sh` fails | The script is cached and idempotent: delete `~/frgfp-libomp` and `~/frgfp-libomp-tarball` (or change `hashFiles('tools/ci/build_libomp.sh')` in the cache key) to force a rebuild; the LLVM tarball is checksum-verified, so a truncated download fails loudly. |
 | `pip install …musllinux…` fails / numba has no wheels | musllinux builds are skipped on purpose: numba publishes no musllinux wheels, so the test environment would have to compile llvmlite and LLVM. Do not remove `*-musllinux*` from `skip` without a full LLVM toolchain. |
 | Only some matrix cells fail, and the log is long | Use *Wheel debug (single target)* with the failing runner/CPython; it runs the same configuration in isolation. |
 | `No threading layer could be loaded` on macOS | numba needs an OpenMP runtime at run time; the macOS test environment already adds Homebrew's `libomp` to `DYLD_FALLBACK_LIBRARY_PATH`. |
