@@ -52,6 +52,25 @@ python -m pytest --pyargs frgfp -m "not benchmark"
 
 from a temporary directory, so the *installed* wheel is what gets tested.
 
+**Always run pytest from outside the source tree.** `python -m pytest` (and
+`python -c`) put the working directory first on `sys.path`, so from the repository
+root of a fresh checkout `import frgfp` picks up the *unbuilt source tree* instead
+of the installed wheel and dies with
+
+```
+ImportError: cannot import name '_core_cpp' from partially initialized module
+'frgfp._core' (most likely due to a circular import)
+```
+
+The "circular import" hint is a red herring: `frgfp/_core/_ansatz.py` imports the
+compiled `_core_cpp`, which exists only in the built wheel (or in the build
+directory of an editable install). This is exactly how the first release run failed
+in its `benchmarks` job, before that job was removed. The workflows are immune for
+structural reasons — cibuildwheel tests in a temporary directory, the `sdist` jobs
+`cd /tmp` first, and the docs jobs use the `sphinx-build` console script (whose
+`sys.path[0]` is the virtualenv's `bin/`, not the repository) — so any new step that
+runs pytest must either `cd` elsewhere first or rely on an editable install.
+
 The 19 tests marked `benchmark` (the large 1D/2D grids, the O(8) order-100 case and
 the cold solver constructions) are **not part of any workflow**: they report timings
 that are only comparable on one machine, and the release pipeline must not depend on
@@ -59,7 +78,7 @@ them. They still carry correctness assertions, so run them on demand before a
 release if you touched the solver or the large-grid paths:
 
 ```bash
-python -m pytest --pyargs frgfp -m benchmark -q --benchmark-sort=name
+cd /tmp && python -m pytest --pyargs frgfp -m benchmark -q --benchmark-sort=name
 ```
 
 Linux wheels are built in the `manylinux_2_28` image (AlmaLinux 8, GCC 14) and
@@ -296,7 +315,10 @@ CIBW_BUILD=cp312-* cibuildwheel --platform linux .
 
 # the sdist and the wheel
 python -m build
-python -m pytest --pyargs frgfp -m "not benchmark"
+# run pytest from OUTSIDE the source tree (see "Always run pytest from outside the
+# source tree" above): `python -m` puts the cwd on sys.path, and the unbuilt source
+# tree would shadow the installed wheel
+(cd /tmp && python -m pytest --pyargs frgfp -m "not benchmark")
 
 # documentation, with the switcher entry for this version highlighted
 DOC_VERSION_MATCH=0.2.0rc1 sphinx-build -b html doc/source /tmp/frgfp-docs
