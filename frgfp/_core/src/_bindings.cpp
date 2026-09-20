@@ -34,11 +34,11 @@ PYBIND11_MODULE(_core_cpp, m) {
         .def_property_readonly("ansatz", &FuncFromAnsatz::get_ansatz)
         .def_property_readonly("num_coeffs", &FuncFromAnsatz::get_num_coeffs)
         .def("evaluate", &FuncFromAnsatz::evaluate, py::arg("grid"),
-             "Evaluates the functional expansion on the provided collocation grid.")
+             "Evaluates the function expansion on the provided collocation grid.")
         .def("evaluate_grad", &FuncFromAnsatz::evaluate_grad, py::arg("grid"),
-             "Evaluates the functional gradient on the provided collocation grid.")
+             "Evaluates the gradient of the expansion on the provided collocation grid.")
         .def("evaluate_hess", &FuncFromAnsatz::evaluate_hess, py::arg("grid"),
-             "Evaluates the functional Hessian on the provided collocation grid.");
+             "Evaluates the Hessian of the expansion on the provided collocation grid.");
 
     m.def("fit_coeffs_from_grid", &fit_coeffs_from_grid, 
           py::arg("ansatz"), py::arg("grid"), py::arg("vals"),

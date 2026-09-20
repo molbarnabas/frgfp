@@ -20,6 +20,12 @@ public:
     virtual Eigen::MatrixXd evaluate_basis(const Eigen::MatrixXd& grid) const = 0;
     virtual std::vector<Eigen::MatrixXd> evaluate_basis_grad(const Eigen::MatrixXd& grid) const = 0;
     virtual std::vector<Eigen::MatrixXd> evaluate_basis_hess(const Eigen::MatrixXd& grid) const = 0;
+
+    // Fused basis/gradient/Hessian evaluation from a single set of 1D caches.
+    virtual void evaluate_all(const Eigen::MatrixXd& grid,
+                              Eigen::MatrixXd& M,
+                              std::vector<Eigen::MatrixXd>& grads,
+                              std::vector<Eigen::MatrixXd>& hesss) const;
 };
 
 class ChebyshevAnsatz : public Ansatz {
@@ -32,6 +38,10 @@ public:
     Eigen::MatrixXd evaluate_basis(const Eigen::MatrixXd& grid) const override;
     std::vector<Eigen::MatrixXd> evaluate_basis_grad(const Eigen::MatrixXd& grid) const override;
     std::vector<Eigen::MatrixXd> evaluate_basis_hess(const Eigen::MatrixXd& grid) const override;
+    void evaluate_all(const Eigen::MatrixXd& grid,
+                      Eigen::MatrixXd& M,
+                      std::vector<Eigen::MatrixXd>& grads,
+                      std::vector<Eigen::MatrixXd>& hesss) const override;
 };
 
 class PolyAnsatz : public Ansatz {
@@ -44,6 +54,10 @@ public:
     Eigen::MatrixXd evaluate_basis(const Eigen::MatrixXd& grid) const override;
     std::vector<Eigen::MatrixXd> evaluate_basis_grad(const Eigen::MatrixXd& grid) const override;
     std::vector<Eigen::MatrixXd> evaluate_basis_hess(const Eigen::MatrixXd& grid) const override;
+    void evaluate_all(const Eigen::MatrixXd& grid,
+                      Eigen::MatrixXd& M,
+                      std::vector<Eigen::MatrixXd>& grads,
+                      std::vector<Eigen::MatrixXd>& hesss) const override;
 };
 
 } // namespace core

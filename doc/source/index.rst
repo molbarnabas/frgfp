@@ -1,23 +1,23 @@
-.. frgfp documentation master file, created by
-   sphinx-quickstart on Tue Aug  4 00:48:51 2026.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-frgfp documentation
+FRGfp documentation
 ===================
 
-**frgfp** is a Python package for functional renormalization group (FRG) calculations using collocation methods. It provides efficient implementations of Chebyshev and polynomial ansätze, along with solvers for LPA flow equations.
+**Version:** |release|
 
-This documentation provides an overview of the package, installation instructions, usage examples, and a complete API reference.
+Every release keeps its own copy of this documentation. Use the version switcher
+in the navigation bar to move between releases and the development preview; the
+newest stable release is always available under the entry labelled ``latest``.
+
+.. automodule:: frgfp
+   :no-members:
+   :no-index:
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
 
    installation
    usage
-   api
-   contributing
+   api/index
 
 Indices and tables
 ==================
@@ -25,4 +25,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

@@ -1,3 +1,11 @@
+"""
+Collocation grid generators for the frgfp core module.
+
+Provides uniform and Chebyshev-Gauss-Lobatto multidimensional grids, returned as
+2D arrays of shape ``(N_total, inv_dim)`` with row-major (lexicographic)
+ordering to match the backend's tensor-product evaluation.
+"""
+
 import numpy as np
 from typing import Union, Tuple
 

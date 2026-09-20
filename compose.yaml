@@ -1,0 +1,36 @@
+# Development container for FRGfp.
+#
+#   USER_ID=$(id -u) GROUP_ID=$(id -g) docker compose build
+#   docker compose up -d
+#   docker compose exec dev bash
+#
+# The repository is bind-mounted, so the container and the host share the same
+# working tree and the same .git directory: build and test here, commit and push
+# from the host. The CMake/scikit-build cache lives in a named volume so the
+# container never touches a `build/` directory produced on the host.
+#
+# `doc/build` is deliberately *not* a volume: documentation generated in the
+# container lands in the mounted repository and can be opened on the host.
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    image: frgfp-dev
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - frgfp-build:/workspace/build
+    ports:
+      - "8000:8000"   # documentation preview (python -m http.server / sphinx-autobuild)
+      - "8888:8888"   # JupyterLab for examples/usage.ipynb
+    tty: true
+    stdin_open: true
+    command: sleep infinity
+
+volumes:
+  frgfp-build:

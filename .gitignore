@@ -28,9 +28,16 @@ __pycache__/
 # ==========================================
 *.egg-info/
 dist/
+wheelhouse/
 .pytest_cache/
 .benchmarks/
 .coverage
+
+# ==========================================
+# CI helpers
+# ==========================================
+.cibuildwheel-cache/
+_pages/
 
 # ==========================================
 # IDEs and OS files
@@ -38,4 +45,9 @@ dist/
 .vscode/
 .idea/
 .DS_Store
-.aider*
+
+# ==========================================
+# Sphinx documentation
+# ==========================================
+!doc/Makefile
+doc/source/api/generated/
