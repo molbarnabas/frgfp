@@ -27,7 +27,7 @@ candidates get their own documentation directory and their own switcher entry
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `.github/workflows/ci.yml` | PR into `rc`/`main`, push to `rc`/`main` | Builds and tests a wheel for **every** platform × CPython combination (Linux x86_64 & aarch64, macOS arm64 & x86_64, Windows AMD64 × 3.10–3.14), builds the sdist and installs/tests it, builds the docs with `-W`. The single aggregate job **`ci`** is the status check to require in branch protection. |
+| `.github/workflows/ci.yml` | PR into `rc`/`main`, push to `rc`/`main` | Builds and tests a wheel for **every** supported platform × CPython combination (Linux x86_64 & aarch64, macOS Apple Silicon, Windows AMD64 × 3.10–3.14 — 20 wheels), builds the sdist and installs/tests it, builds the docs with `-W`. The single aggregate job **`ci`** is the status check to require in branch protection. |
 | `.github/workflows/release.yml` | tag `vX.Y.Z` / `vX.Y.ZrcN`, or manual dispatch | Validates the tag, builds/tests all wheels + sdist, runs the benchmark suite, publishes the docs to GitHub Pages, creates the GitHub release, and — after a human approves the `pypi` environment — uploads the wheels and sdist to PyPI. |
 | `.github/workflows/docs-dev.yml` | push to `develop` | Publishes the development preview to `/dev/`. Delete this file if you do not want it. |
 | `.github/workflows/wheel-debug.yml` | manual | Builds and tests **one** wheel for a chosen runner/CPython using the same `pyproject.toml` configuration, so a problem can be iterated on in minutes without re-running the full matrix. It never posts the required `ci` check. |
@@ -68,6 +68,29 @@ also exercise numba's OpenMP layer there, point `DYLD_FALLBACK_LIBRARY_PATH` at 
 `frgfp/.dylibs` directory *inside the installed wheel*, so that numba resolves
 `libomp.dylib` to the same file the extension already loaded and dyld keeps a single
 image.
+
+### Why there is no Intel (x86_64) macOS wheel
+
+Apple Silicon is the only macOS target: since **numba 0.63** and **llvmlite 0.46**
+those projects publish `macosx_*_arm64` wheels only, so a test environment for an
+Intel wheel cannot even be created from PyPI — `pip` reaches for the newest numba,
+finds an arm64 wheel plus an sdist, and the sdist build fails in LLVM. (The last
+PyPI versions with Intel-macOS wheels are numba 0.62.1 and llvmlite 0.45.1,
+cp310–cp313, which is why the matrix used to fail on exactly those cells.) Intel
+wheel columns are therefore not built; the pipeline that once did is documented in
+the git history.
+
+Intel macOS users are not stranded:
+
+* **conda-forge** still builds numba for `osx-64` (0.67.0 for Python 3.10–3.14), so
+  `conda install -c conda-forge numba` followed by `pip install frgfp` works; and
+* the source distribution installs anywhere the [build
+  requirements](../doc/source/installation.rst) are met (CMake, a C++17 compiler,
+  `brew install libomp` on macOS).
+
+Windows, Linux x86_64, Linux aarch64 and macOS Apple Silicon remain fully built and
+tested. The platform table in `doc/source/installation.rst` is the user-facing
+version of this and must be kept in sync when the matrix changes.
 
 
 ## One-time setup
@@ -179,7 +202,7 @@ git merge --no-ff develop            # bring in the changes to be released
 git push
 git tag -a v0.2.0rc1 -m "0.2.0rc1"   # annotated tag; the message is free text
 git push origin v0.2.0rc1
-# -> builds and tests 25 wheels + the sdist, publishes /0.2.0rc1/ docs, creates a
+# -> builds and tests 20 wheels + the sdist, publishes /0.2.0rc1/ docs, creates a
 #    GitHub pre-release, then waits for your approval to upload to PyPI.
 
 # ---------------------------------------------------------------- final release

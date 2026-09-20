@@ -84,6 +84,10 @@ manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.macos]
+# `auto` keeps a local build on an Intel Mac working (native, testable wheel); CI
+# publishes Apple Silicon wheels only, because numba >= 0.63 and llvmlite >= 0.46
+# ship no Intel-macOS wheels, so an Intel wheel could not be installed from PyPI
+# at all.  See RELEASING.md and doc/source/installation.rst.
 archs = ["auto"]
 # All macOS wheels are labelled macOS 11+ (which is Apple Silicon's minimum
 # anyway), so the OpenMP runtime we build below matches the wheel tag exactly.

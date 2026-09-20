@@ -24,7 +24,13 @@ The numerical core is a highly optimized Eigen C++ backend that relies on pre-co
 
 ## Installation
 
-### Prerequisites
+Prebuilt wheels (all CPython 3.10–3.14) are published for **Linux x86_64 and aarch64** (glibc ≥ 2.28), **macOS on Apple Silicon** (macOS 11+) and **Windows x86_64** (Windows 10+). Anything else — notably **Intel macOS** and **musl-based Linux** (Alpine), where Numba publishes no wheels at all — installs from the source distribution, and macOS wheels bundle their OpenMP runtime while Linux wheels use the system one. The full platform table lives in the [installation documentation](doc/source/installation.rst).
+
+```bash
+pip install frgfp
+```
+
+### Prerequisites for building from source
 
 - Python 3.10 or later
 - A C++ compiler with C++17 support (e.g. GCC, Clang, MSVC)
@@ -32,7 +38,7 @@ The numerical core is a highly optimized Eigen C++ backend that relies on pre-co
 - OpenMP (mandatory: the LPA backend calls the OpenMP runtime directly)
 - Eigen3 (header-only, optional: fetched automatically when missing)
 
-With **conda**, all of these are provided by the `environment.yml` shipped in the repository. With plain **pip**, you have to install CMake and a C++17 compiler yourself (for example `apt install cmake g++ libeigen3-dev` on Debian/Ubuntu, or `pip install cmake` if you only need CMake from pip). Eigen3 is optional: when it is not found, the build downloads a pinned copy. On macOS, OpenMP comes from Homebrew (`brew install libomp`) and the build locates it automatically.
+With **conda**, all of these are provided by the `environment.yml` shipped in the repository. With plain **pip**, you have to install CMake and a C++17 compiler yourself (for example `apt install cmake g++ libeigen3-dev` on Debian/Ubuntu, or `pip install cmake` if you only need CMake from pip). Eigen3 is optional: when it is not found, the build downloads a pinned copy. On macOS, OpenMP comes from Homebrew (`brew install libomp`) and the build locates it automatically. On Intel macOS, install Numba from conda-forge first (`conda install -c conda-forge numba`), then `pip install frgfp`.
 
 ### Install with conda (recommended)
 

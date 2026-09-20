@@ -91,14 +91,19 @@ jobs:
       fail-fast: false
       matrix:
         python: ["310", "311", "312", "313", "314"]
-        # `macos-latest` is the arm64 image; `macos-26-intel` is the standard
-        # x64 image (switch to `macos-15-intel` if that label is unavailable on
-        # your plan).  The archs column drives cibuildwheel's CIBW_ARCHS.
+        # Runner labels are pinned deliberately: the build environment - and with
+        # it the Homebrew bottles that delocate has to accept - should only change
+        # when we bump them on purpose.  `macos-26` is the Apple Silicon image.
+        #
+        # macOS is Apple Silicon only: numba >= 0.63 and llvmlite >= 0.46 publish
+        # no Intel (x86_64) macOS wheels, so a test environment for an Intel wheel
+        # cannot even be created from PyPI.  Intel macOS users install from the
+        # sdist or use conda-forge; see RELEASING.md and the platform support table
+        # in doc/source/installation.rst.  The archs column drives CIBW_ARCHS.
         runner:
           - {name: linux-x86_64, os: ubuntu-24.04, archs: x86_64}
           - {name: linux-aarch64, os: ubuntu-24.04-arm, archs: aarch64}
-          - {name: macos-arm64, os: macos-latest, archs: arm64}
-          - {name: macos-x86_64, os: macos-26-intel, archs: x86_64}
+          - {name: macos-arm64, os: macos-26, archs: arm64}
           - {name: windows-amd64, os: windows-2022, archs: AMD64}
     steps:
       - uses: actions/checkout@v7

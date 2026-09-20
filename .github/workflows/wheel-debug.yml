@@ -6,10 +6,13 @@ name: Wheel debug (single target)
 # configuration from pyproject.toml, so what you debug is what CI builds.
 #
 # Examples:
-#   os: macos-latest     archs: arm64    python: 310   -> the macOS delocate path
-#   os: macos-26-intel   archs: x86_64   python: 312
+#   os: macos-26         archs: arm64    python: 310   -> the macOS delocate path
 #   os: ubuntu-24.04     archs: x86_64   python: 314
+#   os: ubuntu-24.04-arm archs: aarch64  python: 312
 #   os: windows-2022     archs: AMD64    python: 310
+#
+# (macOS is built for Apple Silicon only - see RELEASING.md - but the `os` input
+# accepts any label, so an Intel runner can still be used for a one-off check.)
 on:
   workflow_dispatch:
     inputs:
