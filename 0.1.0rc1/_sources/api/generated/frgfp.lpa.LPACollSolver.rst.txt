@@ -1,0 +1,26 @@
+﻿frgfp.lpa.LPACollSolver
+=======================
+
+.. currentmodule:: frgfp.lpa
+
+.. autoclass:: LPACollSolver
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~LPACollSolver.__init__
+      ~LPACollSolver.local_optimize
+      ~LPACollSolver.local_optimize_fixed_iterations
+      ~LPACollSolver.multistart_optimize
+      ~LPACollSolver.param_path_following
+   
+   
+
+   
+   
+   

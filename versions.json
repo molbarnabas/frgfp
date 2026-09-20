@@ -1,0 +1,12 @@
+{
+  "latest": null,
+  "versions": [
+    "0.1.0rc1"
+  ],
+  "prereleases": [
+    "0.1.0rc1"
+  ],
+  "dev": false,
+  "base_url": "https://molbarnabas.github.io/frgfp/",
+  "updated": "2026-09-20T17:19:01Z"
+}

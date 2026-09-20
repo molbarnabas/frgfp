@@ -1,0 +1,1159 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" data-theme="light">
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frgfp.lpa._solver &#8212; FRGfp v0.1.0rc1 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "light";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=cb8930eaaf36d9849b67" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=cb8930eaaf36d9849b67"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
+
+    <script src="../../../_static/documentation_options.js?v=944ffb79"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/frgfp/lpa/_solver';</script>
+    <script>
+        DOCUMENTATION_OPTIONS.theme_version = '0.21.0';
+        DOCUMENTATION_OPTIONS.theme_switcher_json_url = 'https://molbarnabas.github.io/frgfp/switcher.json';
+        DOCUMENTATION_OPTIONS.theme_switcher_version_match = '0.1.0rc1';
+        DOCUMENTATION_OPTIONS.show_version_warning_banner =
+            false;
+        </script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="canonical" href="https://molbarnabas.github.io/frgfp/_modules/frgfp/lpa/_solver.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.1.0rc1" />
+    <meta name="docbuild:last-update" content="Sep 20, 2026"/>
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="light">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+    
+    <img src="../../../_static/frgfp_logo.png" class="logo__image only-light" alt="FRGfp v0.1.0rc1 documentation - Home"/>
+    <img src="../../../_static/frgfp_logo.png" class="logo__image only-dark pst-js-only" alt="FRGfp v0.1.0rc1 documentation - Home"/>
+  
+  
+</a></div>
+    
+      <div class="navbar-item">
+<div class="version-switcher__container dropdown pst-js-only">
+  <button id="pst-version-switcher-button-2"
+    type="button"
+    class="version-switcher__button btn btn-sm dropdown-toggle"
+    data-bs-toggle="dropdown"
+    aria-haspopup="listbox"
+    aria-controls="pst-version-switcher-list-2"
+    aria-label="Version switcher list"
+  >
+    Choose version  <!-- this text may get changed later by javascript -->
+    <span class="caret"></span>
+  </button>
+  <div id="pst-version-switcher-list-2"
+    class="version-switcher__menu dropdown-menu list-group-flush py-0"
+    role="listbox" aria-labelledby="pst-version-switcher-button-2">
+    <!-- dropdown will be populated by javascript on page load -->
+  </div>
+</div></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../usage.html">
+    Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/molbarnabas/frgfp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../usage.html">
+    Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item">
+
+<div class="theme-switch-container dropdown pst-js-only" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Color mode">
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button dropdown-toggle" aria-label="Color mode" data-bs-toggle="dropdown">
+    <i class="theme-switch fa-solid fa-sun fa-lg fa-fw" data-mode="light" title="Light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg fa-fw" data-mode="dark" title="Dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg fa-fw" data-mode="auto" title="System Settings"></i>
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg fa-fw me-1"></i>System Settings</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="light"><i class="fa-solid fa-sun fa-lg fa-fw me-1"></i>Light</button></li>
+    <li><button class="dropdown-item d-flex align-items-center theme-change-button" data-mode="dark"><i class="fa-solid fa-moon fa-lg fa-fw me-1"></i>Dark</button></li>
+  </ul>
+</div></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/molbarnabas/frgfp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">frgfp.lpa._solver</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for frgfp.lpa._solver</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""</span>
+<span class="sd">Internal implementation of the LPA collocation solver and Numba C-callback bridges.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numba</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nb</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numba</span><span class="w"> </span><span class="kn">import</span> <span class="n">types</span><span class="p">,</span> <span class="n">cfunc</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">frgfp._core</span><span class="w"> </span><span class="kn">import</span> <span class="n">FuncFromAnsatz</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">frgfp._core</span><span class="w"> </span><span class="kn">import</span> <span class="n">_core_cpp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">_lpa_cpp</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_bind_threading_layer_to_openmp</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Bind Numba's parallel layer to OpenMP before it is initialised."""</span>
+    <span class="k">if</span> <span class="n">nb</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">THREADING_LAYER</span> <span class="o">!=</span> <span class="s2">"default"</span><span class="p">:</span>
+        <span class="k">return</span>  <span class="c1"># An explicit NUMBA_THREADING_LAYER / config setting wins.</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">nb</span><span class="o">.</span><span class="n">threading_layer</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="c1"># Not initialised yet, so it is still safe to choose the layer.</span>
+        <span class="n">nb</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">THREADING_LAYER</span> <span class="o">=</span> <span class="s2">"omp"</span>
+
+<span class="n">_bind_threading_layer_to_openmp</span><span class="p">()</span>
+
+<span class="n">c_sig</span> <span class="o">=</span> <span class="n">types</span><span class="o">.</span><span class="n">void</span><span class="p">(</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">intc</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">intc</span>
+<span class="p">)</span>
+
+<span class="c1"># Batched callback: (I, V, dV, ddV, params, rhs_out, n_points, n_cols, inv_dim)</span>
+<span class="n">batch_sig</span> <span class="o">=</span> <span class="n">types</span><span class="o">.</span><span class="n">void</span><span class="p">(</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">intc</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">intc</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">intc</span>
+<span class="p">)</span>
+
+<span class="c1"># Sensitivity callback (inv_dim == 1): (I, V, dV, ddV, params, fV_out, fdV_out, fddV_out, n_points)</span>
+<span class="n">sens_sig</span> <span class="o">=</span> <span class="n">types</span><span class="o">.</span><span class="n">void</span><span class="p">(</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">CPointer</span><span class="p">(</span><span class="n">types</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+    <span class="n">types</span><span class="o">.</span><span class="n">intc</span>
+<span class="p">)</span>
+
+<span class="c1"># Compiled callbacks cached per (flow function, inv_dim, param_dim, build flags).</span>
+<span class="n">_CALLBACK_CACHE</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="c1"># Mirrors kBatchThreshold in _solver.cpp: below this many coefficients the batched kernel is never used.</span>
+<span class="n">_BATCH_THRESHOLD</span> <span class="o">=</span> <span class="mi">64</span>
+
+<span class="c1"># Mirrors kSensitivityThreshold in _solver.cpp: below this many coefficients the rank-1 kernel is never used.</span>
+<span class="n">_SENSITIVITY_THRESHOLD</span> <span class="o">=</span> <span class="mi">16</span>
+
+<span class="c1"># Mirrors kSensitivityParallelMinPoints in _solver.cpp: below this many points the parallel kernel is never used.</span>
+<span class="n">_SENSITIVITY_PARALLEL_MIN_POINTS</span> <span class="o">=</span> <span class="mi">512</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_flow_signature</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Validate the ``(I, V, dV, ddV, params)`` signature of the flow callable."""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"'flowrhs_func' must be callable. Received: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">return</span>  <span class="c1"># Signature unavailable (e.g. builtin/C callable): skip the arity check.</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">p</span><span class="o">.</span><span class="n">VAR_POSITIONAL</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">):</span>
+        <span class="k">return</span>  <span class="c1"># Accepts *args: assume it can accept the five flow arguments.</span>
+    <span class="n">positional</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span>
+                  <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">kind</span> <span class="ow">in</span> <span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">POSITIONAL_ONLY</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">POSITIONAL_OR_KEYWORD</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">positional</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">5</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="s2">"flowrhs_func must accept the five arguments (I, V, dV, ddV, params); "</span>
+            <span class="sa">f</span><span class="s2">"received a callable with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">positional</span><span class="p">)</span><span class="si">}</span><span class="s2"> positional parameter(s)."</span>
+        <span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_jitted</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Numba-compile the flow function, falling back to no disk cache when needed."""</span>
+    <span class="n">extra</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"inline"</span><span class="p">:</span> <span class="s2">"always"</span><span class="p">}</span> <span class="k">if</span> <span class="n">inline</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"flowrhs_func '</span><span class="si">{</span><span class="nb">getattr</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">,</span><span class="w"> </span><span class="s1">'__name__'</span><span class="p">,</span><span class="w"> </span><span class="n">flowrhs_func</span><span class="p">)</span><span class="si">}</span><span class="s2">' cannot be "</span>
+            <span class="sa">f</span><span class="s2">"cached by Numba (</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">). Compiling without disk caching instead; define the "</span>
+            <span class="s2">"flow function at module level to enable caching."</span><span class="p">,</span>
+            <span class="ne">RuntimeWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">extra</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_scalar_callback</span><span class="p">(</span><span class="n">jitted_func</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Compile the scalar (one flow evaluation per collocation point) C-callback."""</span>
+    <span class="k">if</span> <span class="n">inv_dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="nd">@cfunc</span><span class="p">(</span><span class="n">c_sig</span><span class="p">)</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">scalar_callback</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">V_ptr</span><span class="p">,</span> <span class="n">dV_ptr</span><span class="p">,</span> <span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">params_ptr</span><span class="p">,</span> <span class="n">rhs_out_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">,</span> <span class="n">i_dim</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">"""Evaluate the flow point-by-point for a one-dimensional invariant."""</span>
+            <span class="n">I_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">)</span>
+            <span class="n">V_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">V_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">)</span>
+            <span class="n">dV_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">dV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">)</span>
+            <span class="n">ddV_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">)</span>
+            <span class="n">params_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">params_ptr</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">)</span>
+            <span class="n">rhs_out</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">rhs_out_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pts</span><span class="p">):</span>
+                <span class="n">rhs_out</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">I_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">V_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">params_arr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nd">@cfunc</span><span class="p">(</span><span class="n">c_sig</span><span class="p">)</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">scalar_callback</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">V_ptr</span><span class="p">,</span> <span class="n">dV_ptr</span><span class="p">,</span> <span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">params_ptr</span><span class="p">,</span> <span class="n">rhs_out_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">,</span> <span class="n">i_dim</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">"""Evaluate the flow point-by-point for a multi-dimensional invariant."""</span>
+            <span class="n">I_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">i_dim</span><span class="p">))</span>
+            <span class="n">V_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">V_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">)</span>
+            <span class="c1"># The interleaved C++ memory maps exactly onto these 2D/3D shapes.</span>
+            <span class="n">dV_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">dV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">i_dim</span><span class="p">))</span>
+            <span class="n">ddV_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">ddV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">i_dim</span><span class="p">,</span> <span class="n">i_dim</span><span class="p">))</span>
+            <span class="n">params_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">params_ptr</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">)</span>
+            <span class="n">rhs_out</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">rhs_out_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pts</span><span class="p">):</span>
+                <span class="n">rhs_out</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">I_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">V_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">params_arr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">scalar_callback</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_batch_callback</span><span class="p">(</span><span class="n">jitted_func</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Compile the batched (one parallel launch for all perturbation columns) C-callback."""</span>
+    <span class="c1"># One prange launch evaluates every (point, coefficient-column) pair.</span>
+    <span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">batch_kernel</span><span class="p">(</span><span class="n">I_arr</span><span class="p">,</span> <span class="n">V_arr</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">,</span> <span class="n">rhs_arr</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Evaluate the flow for every (point, coefficient-column) pair in parallel."""</span>
+        <span class="n">n_pts</span><span class="p">,</span> <span class="n">n_cols</span> <span class="o">=</span> <span class="n">V_arr</span><span class="o">.</span><span class="n">shape</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">n_pts</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_cols</span><span class="p">):</span>
+                <span class="n">rhs_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">jitted_func</span><span class="p">(</span>
+                    <span class="n">I_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">V_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">],</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">],</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">],</span> <span class="n">params_arr</span><span class="p">)</span>
+
+    <span class="nd">@cfunc</span><span class="p">(</span><span class="n">batch_sig</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">batch_callback</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">V_ptr</span><span class="p">,</span> <span class="n">dV_ptr</span><span class="p">,</span> <span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">params_ptr</span><span class="p">,</span>
+                       <span class="n">rhs_out_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">,</span> <span class="n">n_cols</span><span class="p">,</span> <span class="n">i_dim</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Wrap the batched parallel kernel as a C-callback."""</span>
+        <span class="n">I_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">)</span>
+        <span class="n">V_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">V_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">n_cols</span><span class="p">))</span>
+        <span class="n">dV_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">dV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">n_cols</span><span class="p">))</span>
+        <span class="n">ddV_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">ddV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">n_cols</span><span class="p">))</span>
+        <span class="n">params_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">params_ptr</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">)</span>
+        <span class="n">rhs_arr</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">rhs_out_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">n_cols</span><span class="p">))</span>
+        <span class="n">batch_kernel</span><span class="p">(</span><span class="n">I_arr</span><span class="p">,</span> <span class="n">V_arr</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">,</span> <span class="n">rhs_arr</span><span class="p">)</span>
+
+    <span class="c1"># Warm up the parallel runtime while the GIL is still held.</span>
+    <span class="n">batch_kernel</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">param_dim</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">batch_callback</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_sensitivity_callbacks</span><span class="p">(</span><span class="n">jitted_func</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">warm_parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Compile the rank-1 Jacobian sensitivity kernels (serial and parallel)."""</span>
+    <span class="k">if</span> <span class="n">inv_dim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_make_sensitivity_callbacks_nd</span><span class="p">(</span><span class="n">jitted_func</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">warm_parallel</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_make_sensitivity_callbacks_1d</span><span class="p">(</span><span class="n">jitted_func</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">,</span> <span class="n">warm_parallel</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_sensitivity_callbacks_1d</span><span class="p">(</span><span class="n">jitted_func</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">,</span> <span class="n">warm_parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Rank-1 sensitivity kernels for ``inv_dim == 1`` (flat scalar fast path)."""</span>
+    <span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sens_kernel_serial</span><span class="p">(</span><span class="n">I_arr</span><span class="p">,</span> <span class="n">V_arr</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">,</span> <span class="n">fV</span><span class="p">,</span> <span class="n">fdV</span><span class="p">,</span> <span class="n">fddV</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Evaluate the flow sensitivities point-by-point (single-threaded)."""</span>
+        <span class="n">n_pts</span> <span class="o">=</span> <span class="n">V_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pts</span><span class="p">):</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">V_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">dv</span> <span class="o">=</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">ddv</span> <span class="o">=</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">ii</span> <span class="o">=</span> <span class="n">I_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">hv</span> <span class="o">=</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+            <span class="n">hd</span> <span class="o">=</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">dv</span><span class="p">))</span>
+            <span class="n">hh</span> <span class="o">=</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">ddv</span><span class="p">))</span>
+            <span class="n">fV</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span> <span class="o">+</span> <span class="n">hv</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">ddv</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">)</span>
+                     <span class="o">-</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span> <span class="o">-</span> <span class="n">hv</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">ddv</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">hv</span><span class="p">)</span>
+            <span class="n">fdV</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv</span> <span class="o">+</span> <span class="n">hd</span><span class="p">,</span> <span class="n">ddv</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">)</span>
+                      <span class="o">-</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv</span> <span class="o">-</span> <span class="n">hd</span><span class="p">,</span> <span class="n">ddv</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">hd</span><span class="p">)</span>
+            <span class="n">fddV</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">ddv</span> <span class="o">+</span> <span class="n">hh</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">)</span>
+                       <span class="o">-</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">ddv</span> <span class="o">-</span> <span class="n">hh</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">hh</span><span class="p">)</span>
+
+    <span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sens_kernel_parallel</span><span class="p">(</span><span class="n">I_arr</span><span class="p">,</span> <span class="n">V_arr</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">,</span> <span class="n">fV</span><span class="p">,</span> <span class="n">fdV</span><span class="p">,</span> <span class="n">fddV</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Evaluate the flow sensitivities across points in parallel."""</span>
+        <span class="n">n_pts</span> <span class="o">=</span> <span class="n">V_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">n_pts</span><span class="p">):</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">V_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">dv</span> <span class="o">=</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">ddv</span> <span class="o">=</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">ii</span> <span class="o">=</span> <span class="n">I_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">hv</span> <span class="o">=</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+            <span class="n">hd</span> <span class="o">=</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">dv</span><span class="p">))</span>
+            <span class="n">hh</span> <span class="o">=</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">ddv</span><span class="p">))</span>
+            <span class="n">fV</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span> <span class="o">+</span> <span class="n">hv</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">ddv</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">)</span>
+                     <span class="o">-</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span> <span class="o">-</span> <span class="n">hv</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">ddv</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">hv</span><span class="p">)</span>
+            <span class="n">fdV</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv</span> <span class="o">+</span> <span class="n">hd</span><span class="p">,</span> <span class="n">ddv</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">)</span>
+                      <span class="o">-</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv</span> <span class="o">-</span> <span class="n">hd</span><span class="p">,</span> <span class="n">ddv</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">hd</span><span class="p">)</span>
+            <span class="n">fddV</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">ddv</span> <span class="o">+</span> <span class="n">hh</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">)</span>
+                       <span class="o">-</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">ddv</span> <span class="o">-</span> <span class="n">hh</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">hh</span><span class="p">)</span>
+
+    <span class="c1"># Force compilation of the serial kernel now (raises on a typing failure).</span>
+    <span class="n">sens_kernel_serial</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">param_dim</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="nd">@cfunc</span><span class="p">(</span><span class="n">sens_sig</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">serial_callback</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">V_ptr</span><span class="p">,</span> <span class="n">dV_ptr</span><span class="p">,</span> <span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">params_ptr</span><span class="p">,</span>
+                        <span class="n">fV_ptr</span><span class="p">,</span> <span class="n">fdV_ptr</span><span class="p">,</span> <span class="n">fddV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Wrap the serial sensitivity kernel as a C-callback."""</span>
+        <span class="n">sens_kernel_serial</span><span class="p">(</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">V_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">dV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">params_ptr</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fdV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fddV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@cfunc</span><span class="p">(</span><span class="n">sens_sig</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parallel_callback</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">V_ptr</span><span class="p">,</span> <span class="n">dV_ptr</span><span class="p">,</span> <span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">params_ptr</span><span class="p">,</span>
+                          <span class="n">fV_ptr</span><span class="p">,</span> <span class="n">fdV_ptr</span><span class="p">,</span> <span class="n">fddV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Wrap the parallel sensitivity kernel as a C-callback."""</span>
+        <span class="n">sens_kernel_parallel</span><span class="p">(</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">V_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">dV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">params_ptr</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span> <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fdV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fddV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Warm up the parallel runtime now, while the GIL is still held, to avoid a later deadlock.</span>
+    <span class="k">if</span> <span class="n">warm_parallel</span><span class="p">:</span>
+        <span class="n">sens_kernel_parallel</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">param_dim</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">serial_callback</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">parallel_callback</span><span class="o">.</span><span class="n">address</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_sensitivity_callbacks_nd</span><span class="p">(</span><span class="n">jitted_func</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">warm_parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Rank-1 sensitivity kernels for ``inv_dim &gt; 1`` (general tensor path)."""</span>
+    <span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="s2">"always"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sens_point</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">I_arr</span><span class="p">,</span> <span class="n">V_arr</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">,</span> <span class="n">fV</span><span class="p">,</span> <span class="n">fdV</span><span class="p">,</span> <span class="n">fddV</span><span class="p">,</span>
+                   <span class="n">dv_p</span><span class="p">,</span> <span class="n">dv_m</span><span class="p">,</span> <span class="n">ddv_p</span><span class="p">,</span> <span class="n">ddv_m</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Evaluate every flow sensitivity at a single collocation point."""</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">V_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">ii</span> <span class="o">=</span> <span class="n">I_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+        <span class="n">hv</span> <span class="o">=</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+        <span class="n">fV</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span> <span class="o">+</span> <span class="n">hv</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">params_arr</span><span class="p">)</span>
+                 <span class="o">-</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span> <span class="o">-</span> <span class="n">hv</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">params_arr</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">hv</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">):</span>
+            <span class="n">hd</span> <span class="o">=</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">a</span><span class="p">]))</span>
+            <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">):</span>
+                <span class="n">dv_p</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span>
+                <span class="n">dv_m</span><span class="p">[</span><span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span>
+            <span class="n">dv_p</span><span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="o">+=</span> <span class="n">hd</span>
+            <span class="n">dv_m</span><span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="o">-=</span> <span class="n">hd</span>
+            <span class="n">fdV</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">a</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv_p</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">params_arr</span><span class="p">)</span>
+                         <span class="o">-</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dv_m</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">params_arr</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">hd</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">):</span>
+                <span class="n">hh</span> <span class="o">=</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">]))</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">):</span>
+                        <span class="n">ddv_p</span><span class="p">[</span><span class="n">c</span><span class="p">,</span> <span class="n">e</span><span class="p">]</span> <span class="o">=</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">e</span><span class="p">]</span>
+                        <span class="n">ddv_m</span><span class="p">[</span><span class="n">c</span><span class="p">,</span> <span class="n">e</span><span class="p">]</span> <span class="o">=</span> <span class="n">ddV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">e</span><span class="p">]</span>
+                <span class="n">ddv_p</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span> <span class="o">+=</span> <span class="n">hh</span>
+                <span class="n">ddv_m</span><span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span> <span class="o">-=</span> <span class="n">hh</span>
+                <span class="n">fddV</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ddv_p</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">)</span>
+                                 <span class="o">-</span> <span class="n">jitted_func</span><span class="p">(</span><span class="n">ii</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ddv_m</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">hh</span><span class="p">)</span>
+
+    <span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sens_kernel_serial</span><span class="p">(</span><span class="n">I_arr</span><span class="p">,</span> <span class="n">V_arr</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">,</span> <span class="n">fV</span><span class="p">,</span> <span class="n">fdV</span><span class="p">,</span> <span class="n">fddV</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Evaluate the flow sensitivities point-by-point (single-threaded)."""</span>
+        <span class="n">n_pts</span> <span class="o">=</span> <span class="n">V_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dv_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">)</span>
+        <span class="n">dv_m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">)</span>
+        <span class="n">ddv_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">))</span>
+        <span class="n">ddv_m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pts</span><span class="p">):</span>
+            <span class="n">sens_point</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">I_arr</span><span class="p">,</span> <span class="n">V_arr</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">,</span>
+                       <span class="n">fV</span><span class="p">,</span> <span class="n">fdV</span><span class="p">,</span> <span class="n">fddV</span><span class="p">,</span> <span class="n">dv_p</span><span class="p">,</span> <span class="n">dv_m</span><span class="p">,</span> <span class="n">ddv_p</span><span class="p">,</span> <span class="n">ddv_m</span><span class="p">)</span>
+
+    <span class="nd">@nb</span><span class="o">.</span><span class="n">njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sens_kernel_parallel</span><span class="p">(</span><span class="n">I_arr</span><span class="p">,</span> <span class="n">V_arr</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">,</span> <span class="n">fV</span><span class="p">,</span> <span class="n">fdV</span><span class="p">,</span> <span class="n">fddV</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Evaluate the flow sensitivities across points in parallel."""</span>
+        <span class="n">n_pts</span> <span class="o">=</span> <span class="n">V_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">n_threads</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">get_num_threads</span><span class="p">()</span>
+        <span class="n">dv_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_threads</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">))</span>
+        <span class="n">dv_m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_threads</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">))</span>
+        <span class="n">ddv_p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_threads</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">))</span>
+        <span class="n">ddv_m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">n_threads</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nb</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">n_pts</span><span class="p">):</span>
+            <span class="n">tid</span> <span class="o">=</span> <span class="n">nb</span><span class="o">.</span><span class="n">get_thread_id</span><span class="p">()</span>
+            <span class="n">sens_point</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">I_arr</span><span class="p">,</span> <span class="n">V_arr</span><span class="p">,</span> <span class="n">dV_arr</span><span class="p">,</span> <span class="n">ddV_arr</span><span class="p">,</span> <span class="n">params_arr</span><span class="p">,</span>
+                       <span class="n">fV</span><span class="p">,</span> <span class="n">fdV</span><span class="p">,</span> <span class="n">fddV</span><span class="p">,</span> <span class="n">dv_p</span><span class="p">[</span><span class="n">tid</span><span class="p">],</span> <span class="n">dv_m</span><span class="p">[</span><span class="n">tid</span><span class="p">],</span> <span class="n">ddv_p</span><span class="p">[</span><span class="n">tid</span><span class="p">],</span> <span class="n">ddv_m</span><span class="p">[</span><span class="n">tid</span><span class="p">])</span>
+
+    <span class="c1"># Force compilation of the serial kernel now (raises on a typing failure).</span>
+    <span class="n">sens_kernel_serial</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">param_dim</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+    <span class="p">)</span>
+
+    <span class="nd">@cfunc</span><span class="p">(</span><span class="n">sens_sig</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">serial_callback</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">V_ptr</span><span class="p">,</span> <span class="n">dV_ptr</span><span class="p">,</span> <span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">params_ptr</span><span class="p">,</span>
+                        <span class="n">fV_ptr</span><span class="p">,</span> <span class="n">fdV_ptr</span><span class="p">,</span> <span class="n">fddV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Wrap the serial sensitivity kernel as a C-callback."""</span>
+        <span class="n">sens_kernel_serial</span><span class="p">(</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">V_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">dV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">ddV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">params_ptr</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fdV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fddV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@cfunc</span><span class="p">(</span><span class="n">sens_sig</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parallel_callback</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="n">V_ptr</span><span class="p">,</span> <span class="n">dV_ptr</span><span class="p">,</span> <span class="n">ddV_ptr</span><span class="p">,</span> <span class="n">params_ptr</span><span class="p">,</span>
+                          <span class="n">fV_ptr</span><span class="p">,</span> <span class="n">fdV_ptr</span><span class="p">,</span> <span class="n">fddV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Wrap the parallel sensitivity kernel as a C-callback."""</span>
+        <span class="n">sens_kernel_parallel</span><span class="p">(</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">I_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">V_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">dV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">ddV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">params_ptr</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fV_ptr</span><span class="p">,</span> <span class="n">n_pts</span><span class="p">),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fdV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+            <span class="n">nb</span><span class="o">.</span><span class="n">carray</span><span class="p">(</span><span class="n">fddV_ptr</span><span class="p">,</span> <span class="p">(</span><span class="n">n_pts</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Warm up the parallel runtime while the GIL is still held (see the 1D path).</span>
+    <span class="k">if</span> <span class="n">warm_parallel</span><span class="p">:</span>
+        <span class="n">sens_kernel_parallel</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">param_dim</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">)),</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">serial_callback</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">parallel_callback</span><span class="o">.</span><span class="n">address</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_callbacks</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">,</span>
+                     <span class="n">build_batch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">build_sensitivity</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                     <span class="n">warm_parallel_sensitivity</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Build (and cache) the Numba C-callbacks bridging C++ to the flow equation."""</span>
+    <span class="n">cache_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">flowrhs_func</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">,</span>
+                 <span class="n">build_batch</span><span class="p">,</span> <span class="n">build_sensitivity</span><span class="p">,</span> <span class="n">warm_parallel_sensitivity</span><span class="p">)</span>
+    <span class="n">cached</span> <span class="o">=</span> <span class="n">_CALLBACK_CACHE</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cache_key</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">cached</span>
+
+    <span class="n">_validate_flow_signature</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">)</span>
+    <span class="n">jitted_func</span> <span class="o">=</span> <span class="n">_make_jitted</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">scalar_address</span> <span class="o">=</span> <span class="n">_make_scalar_callback</span><span class="p">(</span><span class="n">jitted_func</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">)</span><span class="o">.</span><span class="n">address</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"flowrhs_func '</span><span class="si">{</span><span class="nb">getattr</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">,</span><span class="w"> </span><span class="s1">'__name__'</span><span class="p">,</span><span class="w"> </span><span class="n">flowrhs_func</span><span class="p">)</span><span class="si">}</span><span class="s2">' could not be "</span>
+            <span class="s2">"JIT-compiled by Numba. It must be a nopython-compatible function with the "</span>
+            <span class="s2">"signature (I, V, dV, ddV, params)."</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="c1"># An aggressively inlined variant removes the per-point call boundary; fall back if unavailable.</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">jitted_inline</span> <span class="o">=</span> <span class="n">_make_jitted</span><span class="p">(</span><span class="n">flowrhs_func</span><span class="p">,</span> <span class="n">inline</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">jitted_inline</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_first_working</span><span class="p">(</span><span class="n">builder</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Run `builder` on each dispatcher candidate; 0 + warning on total failure."""</span>
+        <span class="n">last_exc</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="p">(</span><span class="n">jitted_inline</span><span class="p">,</span> <span class="n">jitted_func</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">candidate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">builder</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - defensive fallback</span>
+                <span class="n">last_exc</span> <span class="o">=</span> <span class="n">exc</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> unavailable (</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">last_exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">last_exc</span><span class="si">}</span><span class="s2">); "</span>
+            <span class="s2">"falling back to the scalar finite-difference Jacobian path."</span><span class="p">,</span>
+            <span class="ne">RuntimeWarning</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="n">batch_address</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">sens_address</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">sens_par_address</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">build_batch</span> <span class="ow">and</span> <span class="n">inv_dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># Batched kernel: inv_dim == 1 only, compiled above its coefficient gate.</span>
+        <span class="n">batch_address</span> <span class="o">=</span> <span class="n">_first_working</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">jf</span><span class="p">:</span> <span class="n">_make_batch_callback</span><span class="p">(</span><span class="n">jf</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">)</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+            <span class="s2">"Batched Jacobian kernel"</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Rank-1 kernels work for any inv_dim but are only compiled above the sensitivity gate.</span>
+    <span class="k">if</span> <span class="n">build_sensitivity</span><span class="p">:</span>
+        <span class="n">sens_pack</span> <span class="o">=</span> <span class="n">_first_working</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">jf</span><span class="p">:</span> <span class="n">_make_sensitivity_callbacks</span><span class="p">(</span>
+                <span class="n">jf</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span>
+                <span class="n">warm_parallel</span><span class="o">=</span><span class="n">warm_parallel_sensitivity</span><span class="p">),</span>
+            <span class="s2">"Rank-1 sensitivity kernel"</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">sens_pack</span><span class="p">:</span>
+            <span class="n">sens_address</span><span class="p">,</span> <span class="n">sens_par_address</span> <span class="o">=</span> <span class="n">sens_pack</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="p">(</span><span class="n">scalar_address</span><span class="p">,</span> <span class="n">batch_address</span><span class="p">,</span> <span class="n">sens_address</span><span class="p">,</span> <span class="n">sens_par_address</span><span class="p">)</span>
+    <span class="n">_CALLBACK_CACHE</span><span class="p">[</span><span class="n">cache_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+<div class="viewcode-block" id="LPACollSolver">
+<a class="viewcode-back" href="../../../api/generated/frgfp.lpa.LPACollSolver.html#frgfp.lpa.LPACollSolver">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LPACollSolver</span><span class="p">(</span><span class="n">_lpa_cpp</span><span class="o">.</span><span class="n">LPACollSolver_cpp</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Fixed-point solver for LPA flow equations using collocation methods.</span>
+
+<span class="sd">    Compiles a flow equation with Numba (fastmath) and executes</span>
+<span class="sd">    zero-allocation, O(N) optimized Newton-Gauss loops in C++.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coll_grid : np.ndarray</span>
+<span class="sd">        A 2D array of shape `(N_points, inv_dim)` containing the collocation grid.</span>
+<span class="sd">    ansatz : frgfp.Ansatz</span>
+<span class="sd">        The basis function expansion object defining the function space.</span>
+<span class="sd">    flowrhs_func : callable</span>
+<span class="sd">        A user-defined function that computes the right-hand side of the flow</span>
+<span class="sd">        equation. It should accept arguments `(I, V, dV, ddV, params)`.</span>
+<span class="sd">    inv_dim : int</span>
+<span class="sd">        The invariant dimension of the problem.</span>
+<span class="sd">    param_dim : int</span>
+<span class="sd">        The number of flow parameters.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coll_grid : np.ndarray</span>
+<span class="sd">        The collocation grid stored as a C-contiguous float64 array.</span>
+<span class="sd">    ansatz : frgfp.Ansatz</span>
+<span class="sd">        The basis function expansion object.</span>
+<span class="sd">    inv_dim : int</span>
+<span class="sd">        The invariant dimension.</span>
+<span class="sd">    param_dim : int</span>
+<span class="sd">        The number of flow parameters.</span>
+<span class="sd">    """</span>
+
+<div class="viewcode-block" id="LPACollSolver.__init__">
+<a class="viewcode-back" href="../../../api/generated/frgfp.lpa.LPACollSolver.html#frgfp.lpa.LPACollSolver.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coll_grid</span><span class="p">,</span> <span class="n">ansatz</span><span class="p">,</span> <span class="n">flowrhs_func</span><span class="p">,</span> <span class="n">inv_dim</span><span class="p">,</span> <span class="n">param_dim</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Initialize the solver with a collocation grid, ansatz, and flow function.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        coll_grid : np.ndarray</span>
+<span class="sd">            A 2D array of shape `(N_points, inv_dim)` containing the collocation grid.</span>
+<span class="sd">        ansatz : frgfp.Ansatz</span>
+<span class="sd">            The basis function expansion object defining the function space.</span>
+<span class="sd">        flowrhs_func : callable</span>
+<span class="sd">            A user-defined function that computes the right-hand side of the flow</span>
+<span class="sd">            equation. It should accept arguments `(I, V, dV, ddV, params)`.</span>
+<span class="sd">        inv_dim : int</span>
+<span class="sd">            The invariant dimension of the problem.</span>
+<span class="sd">        param_dim : int</span>
+<span class="sd">            The number of flow parameters.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ansatz</span><span class="p">,</span> <span class="n">_core_cpp</span><span class="o">.</span><span class="n">Ansatz</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">"The 'ansatz' parameter must be a valid instantiated Ansatz object "</span>
+                <span class="s2">"(e.g. PolyAnsatz or ChebyshevAnsatz)."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The 'inv_dim' parameter must be an integer. Received: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">inv_dim</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">inv_dim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The 'inv_dim' must be a strictly positive integer. Received: </span><span class="si">{</span><span class="n">inv_dim</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">param_dim</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">param_dim</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The 'param_dim' parameter must be an integer. Received: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">param_dim</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">param_dim</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The 'param_dim' must be a strictly positive integer. Received: </span><span class="si">{</span><span class="n">param_dim</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">coll_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">coll_grid</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">'C'</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">coll_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"The collocation grid must be a 1D or 2D array; "</span>
+                <span class="sa">f</span><span class="s2">"received an array with </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">coll_grid</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2"> dimensions."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">coll_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">coll_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">inv_dim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The collocation grid must have shape (N_points, </span><span class="si">{</span><span class="n">inv_dim</span><span class="si">}</span><span class="s2">); "</span>
+                <span class="sa">f</span><span class="s2">"received shape </span><span class="si">{</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">coll_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">inv_dim</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">coll_grid</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"For inv_dim &gt; 1 the collocation grid must be 2D with shape (N_points, </span><span class="si">{</span><span class="n">inv_dim</span><span class="si">}</span><span class="s2">)."</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ansatz</span> <span class="o">=</span> <span class="n">ansatz</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_dim</span> <span class="o">=</span> <span class="n">inv_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">param_dim</span> <span class="o">=</span> <span class="n">param_dim</span>
+
+        <span class="c1"># Only build auxiliary kernels above the C++ coefficient gates (checked on ansatz.num_coeffs).</span>
+        <span class="n">num_coeffs</span> <span class="o">=</span> <span class="n">ansatz</span><span class="o">.</span><span class="n">num_coeffs</span>
+        <span class="n">build_batch</span> <span class="o">=</span> <span class="n">num_coeffs</span> <span class="o">&gt;=</span> <span class="n">_BATCH_THRESHOLD</span>
+        <span class="n">build_sensitivity</span> <span class="o">=</span> <span class="n">num_coeffs</span> <span class="o">&gt;=</span> <span class="n">_SENSITIVITY_THRESHOLD</span>
+        <span class="n">warm_parallel_sensitivity</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">build_sensitivity</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">coll_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">_SENSITIVITY_PARALLEL_MIN_POINTS</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Compile (or reuse cached) Numba C-callbacks for this flow function.</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfunc_address</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_cfunc_address</span><span class="p">,</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">_sens_cfunc_address</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sens_par_cfunc_address</span><span class="p">)</span> <span class="o">=</span> <span class="n">_build_callbacks</span><span class="p">(</span>
+            <span class="n">flowrhs_func</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_dim</span><span class="p">,</span>
+            <span class="n">build_batch</span><span class="o">=</span><span class="n">build_batch</span><span class="p">,</span>
+            <span class="n">build_sensitivity</span><span class="o">=</span><span class="n">build_sensitivity</span><span class="p">,</span>
+            <span class="n">warm_parallel_sensitivity</span><span class="o">=</span><span class="n">warm_parallel_sensitivity</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">coll_grid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ansatz</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cfunc_address</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_batch_cfunc_address</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sens_cfunc_address</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sens_par_cfunc_address</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inv_dim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_dim</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LPACollSolver.local_optimize">
+<a class="viewcode-back" href="../../../api/generated/frgfp.lpa.LPACollSolver.html#frgfp.lpa.LPACollSolver.local_optimize">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">local_optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">init_coeffs</span><span class="p">,</span> <span class="n">flow_params</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">multithread</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Perform a local optimization of the expansion coefficients.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        init_coeffs : list of float or np.ndarray</span>
+<span class="sd">            Initial guess for the expansion coefficients.</span>
+<span class="sd">        flow_params : list or tuple or np.ndarray</span>
+<span class="sd">            Parameters required by the flow function.</span>
+<span class="sd">        maxiter : int, optional</span>
+<span class="sd">            Maximum number of Newton iterations (default is 1000).</span>
+<span class="sd">        tol : float, optional</span>
+<span class="sd">            Convergence tolerance for the Euclidean norm of the residual vector</span>
+<span class="sd">            (default is 1e-6).</span>
+<span class="sd">        multithread : bool, optional</span>
+<span class="sd">            Whether to parallelise the compute-bound flow-evaluation kernels</span>
+<span class="sd">            (the rank-1 sensitivity kernel, or the finite-difference callbacks</span>
+<span class="sd">            when the rank-1 path is unavailable). When False the solver runs</span>
+<span class="sd">            strictly single-threaded (default is False).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        frgfp.FuncFromAnsatz or None</span>
+<span class="sd">            A `FuncFromAnsatz` object with the optimized coefficients if the</span>
+<span class="sd">            solver converged, otherwise `None`.</span>
+<span class="sd">        """</span>
+        <span class="n">init_coeffs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">init_coeffs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">'C'</span><span class="p">)</span>
+        <span class="n">flow_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">flow_params</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">'C'</span><span class="p">)</span>
+        
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">local_optimize</span><span class="p">(</span><span class="n">init_coeffs</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">flow_params</span><span class="p">,</span> <span class="n">multithread</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">FuncFromAnsatz</span><span class="p">(</span><span class="n">ansatz</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ansatz</span><span class="p">,</span> <span class="n">coeffs</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">coeffs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="LPACollSolver.local_optimize_fixed_iterations">
+<a class="viewcode-back" href="../../../api/generated/frgfp.lpa.LPACollSolver.html#frgfp.lpa.LPACollSolver.local_optimize_fixed_iterations">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">local_optimize_fixed_iterations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">init_coeffs</span><span class="p">,</span> <span class="n">flow_params</span><span class="p">,</span> <span class="n">num_iter</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">multithread</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Perform a fixed number of optimization steps without a tolerance-based</span>
+<span class="sd">        stopping criterion.</span>
+
+<span class="sd">        Unlike :meth:`local_optimize`, the iteration always runs exactly</span>
+<span class="sd">        ``num_iter`` steps; convergence is not checked. The residual norm of the</span>
+<span class="sd">        final iterate is available on the underlying ``OptimizeResult``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        init_coeffs : list of float or np.ndarray</span>
+<span class="sd">            Initial guess for the expansion coefficients.</span>
+<span class="sd">        flow_params : list or tuple or np.ndarray</span>
+<span class="sd">            Parameters required by the flow function.</span>
+<span class="sd">        num_iter : int, optional</span>
+<span class="sd">            Exact number of iteration steps to perform (default is 1).</span>
+<span class="sd">        multithread : bool, optional</span>
+<span class="sd">            Whether to parallelise the compute-bound flow-evaluation kernels</span>
+<span class="sd">            (the rank-1 sensitivity kernel, or the finite-difference callbacks</span>
+<span class="sd">            when the rank-1 path is unavailable). When False the solver runs</span>
+<span class="sd">            strictly single-threaded (default is False).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        frgfp.FuncFromAnsatz or None</span>
+<span class="sd">            A `FuncFromAnsatz` object with the resulting coefficients, or</span>
+<span class="sd">            ``None`` if the residual norm became non-finite.</span>
+<span class="sd">        """</span>
+        <span class="n">init_coeffs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">init_coeffs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">'C'</span><span class="p">)</span>
+        <span class="n">flow_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">flow_params</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">'C'</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">local_optimize_fixed_iterations</span><span class="p">(</span>
+            <span class="n">init_coeffs</span><span class="p">,</span> <span class="n">num_iter</span><span class="p">,</span> <span class="n">flow_params</span><span class="p">,</span> <span class="n">multithread</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">FuncFromAnsatz</span><span class="p">(</span><span class="n">ansatz</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ansatz</span><span class="p">,</span> <span class="n">coeffs</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">coeffs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="LPACollSolver.param_path_following">
+<a class="viewcode-back" href="../../../api/generated/frgfp.lpa.LPACollSolver.html#frgfp.lpa.LPACollSolver.param_path_following">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">param_path_following</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">init_coeffs</span><span class="p">,</span> <span class="n">flow_params_path</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">multithread</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Follow a path of flow parameters, optimizing at each step.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        init_coeffs : list of float or np.ndarray</span>
+<span class="sd">            Initial guess for the expansion coefficients.</span>
+<span class="sd">        flow_params_path : list of list or tuple or np.ndarray</span>
+<span class="sd">            A sequence of parameter vectors, each of length `param_dim`.</span>
+<span class="sd">        maxiter : int, optional</span>
+<span class="sd">            Maximum number of Newton iterations per step (default is 1000).</span>
+<span class="sd">        tol : float, optional</span>
+<span class="sd">            Convergence tolerance for the Euclidean norm of the residual vector</span>
+<span class="sd">            (default is 1e-6).</span>
+<span class="sd">        multithread : bool, optional</span>
+<span class="sd">            Whether to parallelise the compute-bound flow-evaluation kernels</span>
+<span class="sd">            (the rank-1 sensitivity kernel, or the finite-difference callbacks</span>
+<span class="sd">            when the rank-1 path is unavailable). When False the solver runs</span>
+<span class="sd">            strictly single-threaded (default is True).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list of frgfp.FuncFromAnsatz or None</span>
+<span class="sd">            A list where each element is a `FuncFromAnsatz` object if the</span>
+<span class="sd">            corresponding step converged, otherwise `None`.</span>
+<span class="sd">        """</span>
+        <span class="n">init_coeffs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">init_coeffs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">'C'</span><span class="p">)</span>
+        <span class="n">path_arrays</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">'C'</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">flow_params_path</span><span class="p">]</span>
+        
+        <span class="n">cpp_results</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">param_path_following</span><span class="p">(</span><span class="n">init_coeffs</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">path_arrays</span><span class="p">,</span> <span class="n">multithread</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="p">[</span><span class="n">FuncFromAnsatz</span><span class="p">(</span><span class="n">ansatz</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ansatz</span><span class="p">,</span> <span class="n">coeffs</span><span class="o">=</span><span class="n">res</span><span class="o">.</span><span class="n">coeffs</span><span class="p">)</span> <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">success</span> <span class="k">else</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">cpp_results</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="LPACollSolver.multistart_optimize">
+<a class="viewcode-back" href="../../../api/generated/frgfp.lpa.LPACollSolver.html#frgfp.lpa.LPACollSolver.multistart_optimize">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">multistart_optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">init_coeffs_list</span><span class="p">,</span> <span class="n">flow_params</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Perform a multistart optimization from multiple initial guesses.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        init_coeffs_list : list of list or np.ndarray</span>
+<span class="sd">            A list of initial coefficient vectors.</span>
+<span class="sd">        flow_params : list or tuple or np.ndarray</span>
+<span class="sd">            Parameters required by the flow function.</span>
+<span class="sd">        maxiter : int, optional</span>
+<span class="sd">            Maximum number of Newton iterations per start (default is 1000).</span>
+<span class="sd">        tol : float, optional</span>
+<span class="sd">            Convergence tolerance for the Euclidean norm of the residual vector</span>
+<span class="sd">            (default is 1e-6).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list of frgfp.FuncFromAnsatz or None</span>
+<span class="sd">            A list where each element is a `FuncFromAnsatz` object if the</span>
+<span class="sd">            corresponding start converged, otherwise `None`.</span>
+<span class="sd">        """</span>
+        <span class="n">flow_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">flow_params</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">'C'</span><span class="p">)</span>
+        <span class="n">init_list_arrays</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ic</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">'C'</span><span class="p">)</span> <span class="k">for</span> <span class="n">ic</span> <span class="ow">in</span> <span class="n">init_coeffs_list</span><span class="p">]</span>
+        
+        <span class="n">cpp_results</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">multistart_optimize</span><span class="p">(</span><span class="n">init_list_arrays</span><span class="p">,</span> <span class="n">maxiter</span><span class="p">,</span> <span class="n">tol</span><span class="p">,</span> <span class="n">flow_params</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="p">[</span><span class="n">FuncFromAnsatz</span><span class="p">(</span><span class="n">ansatz</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ansatz</span><span class="p">,</span> <span class="n">coeffs</span><span class="o">=</span><span class="n">res</span><span class="o">.</span><span class="n">coeffs</span><span class="p">)</span> <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">success</span> <span class="k">else</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">cpp_results</span><span class="p">]</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026, Barnabas Molnar.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.1.0.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.21.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
