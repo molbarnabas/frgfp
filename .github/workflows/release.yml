@@ -1,0 +1,460 @@
+name: Release
+
+# A release is triggered by pushing a tag:
+#   * vX.Y.ZrcN  on the `rc`   branch  -> wheels, tests, pinned docs, GitHub pre-release
+#   * vX.Y.Z     on the `main` branch  -> the same, plus /latest/ in the docs
+# Every artefact is built and tested before anything is published; the PyPI
+# upload itself waits behind the protected `pypi` environment (manual approval).
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+rc[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build; must already exist and match the branch rules"
+        required: true
+      target:
+        description: "Index the approval-gated job would upload to"
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+      publish:
+        description: "Ask for publication (TestPyPI dry runs should use a plain build); set to false to build/validate only"
+        type: boolean
+        default: false
+
+# Documentation deploys rewrite a single branch, so they must never overlap.
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CIBW_CACHE_PATH: ${{ github.workspace }}/.cibuildwheel-cache
+  # Public root of the published documentation (must end with a slash).
+  DOCS_BASE_URL: https://molbarnabas.github.io/frgfp/
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Refuse to build anything unless the tag is a real release tag for this
+  # branch and the version it implies is the version that will be built.
+  # ---------------------------------------------------------------------------
+  validate:
+    name: validate tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.validate.outputs.tag }}
+      version: ${{ steps.validate.outputs.version }}
+      is_prerelease: ${{ steps.validate.outputs.is_prerelease }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install the version cross-check dependencies
+        run: python -m pip install setuptools_scm packaging
+
+      - name: Make the branch tips available for the reachability checks
+        run: git fetch --force origin rc main
+
+      - name: Validate the release tag
+        id: validate
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          python tools/ci/validate_tag.py --tag "$RELEASE_TAG" --repo-dir .
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+
+  # ---------------------------------------------------------------------------
+  # Build and test the wheel on every supported platform/CPython and keep the
+  # wheels as the artefacts that are later attached to the GitHub release and
+  # uploaded to PyPI.
+  # ---------------------------------------------------------------------------
+  wheels:
+    name: wheel · ${{ matrix.runner.name }} · cp${{ matrix.python }}
+    needs: [validate]
+    runs-on: ${{ matrix.runner.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["310", "311", "312", "313", "314"]
+        # Runner labels are pinned deliberately: the build environment - and with
+        # it the Homebrew bottles that delocate has to accept - should only change
+        # when we bump them on purpose.  `macos-26` is the Apple Silicon image.
+        #
+        # macOS is Apple Silicon only: numba >= 0.63 and llvmlite >= 0.46 publish
+        # no Intel (x86_64) macOS wheels, so a test environment for an Intel wheel
+        # cannot even be created from PyPI.  Intel macOS users install from the
+        # sdist or use conda-forge; see RELEASING.md and the platform support table
+        # in doc/source/installation.rst.  The archs column drives CIBW_ARCHS.
+        runner:
+          - {name: linux-x86_64, os: ubuntu-24.04, archs: x86_64}
+          - {name: linux-aarch64, os: ubuntu-24.04-arm, archs: aarch64}
+          - {name: macos-arm64, os: macos-26, archs: arm64}
+          - {name: windows-amd64, os: windows-2022, archs: AMD64}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Cache cibuildwheel's tool downloads
+        uses: actions/cache@v6
+        with:
+          path: |
+            ${{ env.CIBW_CACHE_PATH }}
+            ~/frgfp-libomp
+            ~/frgfp-libomp-tarball
+          key: cibw-${{ matrix.runner.name }}-${{ hashFiles('pyproject.toml', 'tools/ci/build_libomp.sh') }}
+
+      - name: Prepare the macOS OpenMP runtime
+        if: runner.os == 'macOS'
+        shell: bash
+        # The build links the libomp that before-all compiled for the wheel's
+        # deployment target and delocate bundles it into the wheel; the Homebrew
+        # keg is installed only as the fallback for the build (CMakeLists.txt).
+        #
+        # The tests must never load a *second* OpenMP runtime: the extension
+        # loads the bundled one, and if numba's omp layer additionally dlopens
+        # Homebrew's copy, the OpenMP runtime aborts the whole process ("OMP:
+        # Error #15 ... already initialized", which the runner reports as exit
+        # code -6).  Pinning numba to its dependency-free workqueue layer keeps
+        # exactly one runtime in the process; frgfp/lpa/_solver.py honours an
+        # explicit NUMBA_THREADING_LAYER.
+        run: |
+          brew list libomp >/dev/null 2>&1 || brew install libomp
+          echo "NUMBA_THREADING_LAYER=workqueue" >> "$GITHUB_ENV"
+
+      - name: Build the wheel and run pytest
+        uses: pypa/cibuildwheel@v4.2.1
+        env:
+          CIBW_BUILD: cp${{ matrix.python }}-*
+          CIBW_ARCHS: ${{ matrix.runner.archs }}
+          # macOS only: report a failing test run as a GitHub annotation.
+          # Annotations are readable without repository admin rights, so the real
+          # error is visible on the pull request rather than only in the
+          # (admin-only) job log.
+          CIBW_TEST_COMMAND_MACOS: >-
+            log=$(mktemp); python -m pytest --pyargs frgfp -m "not benchmark" -q >"$log" 2>&1
+            || { cat "$log"; echo "::error::pytest failed: $(tail -n 5 "$log" | tr '\n' ' ')"; exit 1; };
+            cat "$log"
+
+      - name: Check that the wheel carries the released version
+        env:
+          EXPECTED: ${{ needs.validate.outputs.version }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob
+          import os
+          import sys
+          from pathlib import Path
+
+          expected = os.environ["EXPECTED"]
+          wheels = sorted(glob.glob("wheelhouse/*.whl"))
+          if len(wheels) != 1:
+              print(f"::error::expected exactly one wheel, found {wheels}")
+              raise SystemExit(1)
+          # PEP 427 filename: <name>-<version>-<python tag>-<abi>-<platform>
+          version = Path(wheels[0]).name.split("-")[1]
+          if version != expected:
+              print(f"::error::{wheels[0]} carries version '{version}', expected '{expected}'")
+              raise SystemExit(1)
+          print(f"version OK: {wheels[0]}")
+          PY
+
+      - name: Upload the wheel
+        uses: actions/upload-artifact@v7
+        with:
+          name: wheel-cp${{ matrix.python }}-${{ matrix.runner.name }}
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Source distribution, installed and tested in a clean environment.
+  # ---------------------------------------------------------------------------
+  sdist:
+    name: sdist
+    needs: [validate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Build the sdist
+        run: |
+          python -m pip install --upgrade build
+          python -m build --sdist --outdir dist
+          ls -l dist
+
+      - name: Install the sdist and run pytest
+        run: |
+          python -m venv /tmp/sdist-venv
+          /tmp/sdist-venv/bin/python -m pip install "dist/frgfp-"*.tar.gz
+          /tmp/sdist-venv/bin/python -m pip install pytest pytest-benchmark
+          cd /tmp
+          /tmp/sdist-venv/bin/python -m pytest --pyargs frgfp -m "not benchmark" -q
+
+      - name: Upload the sdist
+        uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # The full benchmark suite runs once (it uses the large 1D/2D grids and is far
+  # slower than the correctness tests) and its JSON report joins the release
+  # artefacts.
+  # ---------------------------------------------------------------------------
+  benchmarks:
+    name: benchmarks
+    needs: [validate, wheels]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Fetch the Linux wheel
+        uses: actions/download-artifact@v8
+        with:
+          name: wheel-cp312-linux-x86_64
+          path: dist
+
+      - name: Install the wheel and run the benchmarks
+        run: |
+          python -m pip install dist/*.whl
+          python -m pip install pytest pytest-benchmark
+          python -m pytest --pyargs frgfp -m benchmark -q \
+            --benchmark-json=benchmarks.json --benchmark-sort=name
+
+      - name: Upload the benchmark report
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmarks
+          path: benchmarks.json
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Publish the documentation on GitHub Pages (SciPy-style version directories).
+  #   * release candidate -> /<version>/ only, /latest/ is never touched
+  #   * final release     -> /<version>/ and /latest/, and the switcher's
+  #                          "latest" pointer is only ever a final release
+  # ---------------------------------------------------------------------------
+  docs:
+    name: docs
+    needs: [validate, wheels]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write # the docs are committed to the gh-pages branch
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Fetch the Linux wheel
+        uses: actions/download-artifact@v8
+        with:
+          name: wheel-cp312-linux-x86_64
+          path: dist
+
+      - name: Install the wheel and the documentation toolchain
+        run: |
+          python -m pip install dist/*.whl
+          python -m pip install -r requirements.txt
+
+      - name: Build the documentation for this version
+        env:
+          DOC_VERSION_MATCH: ${{ needs.validate.outputs.version }}
+        run: sphinx-build -b html -W --keep-going doc/source doc/build/html-version
+
+      - name: Build the /latest/ documentation (final releases only)
+        if: needs.validate.outputs.is_prerelease == 'false'
+        env:
+          DOC_VERSION_MATCH: latest
+        run: sphinx-build -b html -W --keep-going doc/source doc/build/html-latest
+
+      - name: Check out the published documentation branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q _pages
+          git -C _pages remote add origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git -C _pages fetch --depth=1 origin gh-pages; then
+            git -C _pages checkout -q -B gh-pages FETCH_HEAD
+            echo "continuing from $(git -C _pages rev-parse --short HEAD)"
+          else
+            echo "gh-pages does not exist yet, creating it"
+            git -C _pages checkout -q --orphan gh-pages
+          fi
+
+      - name: Publish the pinned documentation
+        run: |
+          python tools/ci/deploy_docs.py \
+            --pages-dir _pages \
+            --html-dir doc/build/html-version \
+            --version "${{ needs.validate.outputs.version }}" \
+            --target version \
+            --base-url "$DOCS_BASE_URL" \
+            --branch gh-pages
+
+      - name: Point /latest/ at this release (final releases only)
+        if: needs.validate.outputs.is_prerelease == 'false'
+        run: |
+          python tools/ci/deploy_docs.py \
+            --pages-dir _pages \
+            --html-dir doc/build/html-latest \
+            --version "${{ needs.validate.outputs.version }}" \
+            --target latest \
+            --base-url "$DOCS_BASE_URL" \
+            --branch gh-pages
+
+  # ---------------------------------------------------------------------------
+  # GitHub release with every wheel, the sdist and the benchmark report attached.
+  # Pre-releases are marked as such so GitHub keeps showing the last *final*
+  # release as "Latest".
+  # ---------------------------------------------------------------------------
+  github-release:
+    name: github release
+    needs: [validate, wheels, sdist, benchmarks]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch every artefact
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create or update the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          PRERELEASE: ${{ needs.validate.outputs.is_prerelease }}
+        run: |
+          set -euo pipefail
+          ls -l dist
+          flags=(--title "$TAG" --generate-notes --verify-tag)
+          if [ "$PRERELEASE" = "true" ]; then
+            flags+=(--prerelease --latest=false)
+          else
+            flags+=(--latest)
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* "${flags[@]}"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # The "half automatic" publication step: everything above runs on its own, the
+  # upload waits for a human approval of the `pypi` / `testpypi` environment.
+  # Authentication uses PyPI's OIDC trusted publishing, so no API token is ever
+  # stored in the repository (see RELEASING.md).
+  # ---------------------------------------------------------------------------
+  publish-pypi:
+    name: publish to ${{ inputs.target || 'pypi' }}
+    needs: [validate, wheels, sdist, docs, github-release]
+    if: github.event_name == 'push' || inputs.publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: ${{ inputs.target || 'pypi' }}
+    permissions:
+      id-token: write # required for trusted publishing
+      contents: read
+    steps:
+      - name: Fetch the wheels
+        uses: actions/download-artifact@v8
+        with:
+          pattern: wheel-*
+          path: dist
+          merge-multiple: true
+
+      - name: Fetch the sdist
+        uses: actions/download-artifact@v8
+        with:
+          name: sdist
+          path: dist
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Inspect the artefacts that will be uploaded
+        run: |
+          ls -l dist
+          # Only distributions may reach PyPI: the benchmark report and the docs
+          # must never end up in this directory.
+          python - <<'PY'
+          import glob
+          import sys
+
+          unexpected = [p for p in glob.glob("dist/*") if not p.endswith((".whl", ".tar.gz"))]
+          if unexpected:
+              print(f"::error::not a distribution file: {unexpected}")
+              raise SystemExit(1)
+          print(f"{len(glob.glob('dist/*'))} distributions ready")
+          PY
+          python -m pip install twine
+          python -m twine check dist/*
+
+      - name: Publish to TestPyPI
+        if: inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+          print-hash: true
+
+      - name: Publish to PyPI
+        if: inputs.target != 'testpypi'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          print-hash: true
+

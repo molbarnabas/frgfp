@@ -1,0 +1,70 @@
+name: Docs preview (dev)
+
+# Publishes the documentation of the `develop` branch to /dev/ so the version
+# switcher always has a preview entry.  /latest/ is never touched from here.
+# Delete this file if you do not want a continuously updated preview.
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: docs-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOCS_BASE_URL: https://molbarnabas.github.io/frgfp/
+
+jobs:
+  dev-docs:
+    name: dev docs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write # the docs are committed to the gh-pages branch
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install the package and the documentation toolchain
+        run: |
+          python -m pip install .
+          python -m pip install -r requirements.txt
+
+      - name: Build the documentation
+        env:
+          DOC_VERSION_MATCH: dev
+        run: sphinx-build -b html -W --keep-going doc/source doc/build/html
+
+      - name: Check out the published documentation branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q _pages
+          git -C _pages remote add origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git -C _pages fetch --depth=1 origin gh-pages; then
+            git -C _pages checkout -q -B gh-pages FETCH_HEAD
+          else
+            git -C _pages checkout -q --orphan gh-pages
+          fi
+
+      - name: Publish the preview
+        run: |
+          python tools/ci/deploy_docs.py \
+            --pages-dir _pages \
+            --html-dir doc/build/html \
+            --version dev \
+            --target version \
+            --base-url "$DOCS_BASE_URL" \
+            --branch gh-pages

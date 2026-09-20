@@ -7,12 +7,26 @@ name = "frgfp"
 dynamic = ["version"]
 description = "Functional Renormalization Group Fixed Point solver"
 readme = "README.md"
-requires-python = ">=3.8"
+# numba/llvmlite (the JIT layer of the solver) require Python >= 3.10 and only
+# ship cp310..cp314 wheels, so this is the real floor and the CI build matrix
+# (see [tool.cibuildwheel]) matches it exactly.
+requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.20.0", "numba>=0.55.0"
 ]
 
+[project.urls]
+Homepage = "https://github.com/molbarnabas/frgfp"
+Documentation = "https://molbarnabas.github.io/frgfp/latest/"
+Repository = "https://github.com/molbarnabas/frgfp"
+
 [project.optional-dependencies]
+# Runtime test dependencies; also used by cibuildwheel (test-extras), so the
+# wheels are tested with exactly the same plugin set as a local `pytest` run.
+test = [
+    "pytest>=7.0.0",
+    "pytest-benchmark",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-benchmark",
@@ -32,3 +46,81 @@ build-dir = "build"
 provider = "scikit_build_core.metadata.setuptools_scm"
 
 [tool.setuptools_scm]
+
+# -- Testing -------------------------------------------------------------------
+[tool.pytest.ini_options]
+# A bare `pytest` from the repository root collects only the package tests;
+# pytest also accepts an explicit path or `--pyargs`, which is what cibuildwheel
+# uses to test an installed wheel from a temporary working directory.
+testpaths = ["frgfp"]
+addopts = "-ra"
+
+# -- Wheel building ------------------------------------------------------------
+# One build/test primitive for pull requests and releases: cibuildwheel builds
+# the wheel, installs it into a fresh virtual environment and runs the tests from
+# a temporary directory, so the *installed* wheel is always what gets tested.
+#
+# The tests live inside the `frgfp` package and ship with the wheel, hence
+# `--pyargs frgfp`.  Benchmarks are excluded here; the release workflow runs them
+# separately and archives their JSON as an artifact.
+[tool.cibuildwheel]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
+# 32-bit platforms have no numba wheels, free-threaded builds are not a supported
+# numba target yet, and musllinux is skipped deliberately: numba publishes no
+# musllinux wheels at all, so a musllinux wheel could not be installed (or tested)
+# without building llvmlite and LLVM from source.
+skip = ["*-win32", "*-manylinux_i686", "*-musllinux*", "cp314t-*"]
+test-extras = ["test"]
+test-command = 'python -m pytest --pyargs frgfp -m "not benchmark" -q'
+
+[tool.cibuildwheel.linux]
+archs = ["auto64"]
+# The default manylinux2014 image ships GCC 10.2, which is too old to build the
+# current NumPy from source - and the test environment has to install a recent
+# NumPy/Numba.  manylinux_2_28 (AlmaLinux 8, GCC 14) is the modern baseline: the
+# resulting wheels need glibc >= 2.28 (RHEL/Alma/Rocky 8+, Debian 10+,
+# Ubuntu 18.10+).
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+
+[tool.cibuildwheel.macos]
+# `auto` keeps a local build on an Intel Mac working (native, testable wheel); CI
+# publishes Apple Silicon wheels only, because numba >= 0.63 and llvmlite >= 0.46
+# ship no Intel-macOS wheels, so an Intel wheel could not be installed from PyPI
+# at all.  See RELEASING.md and doc/source/installation.rst.
+archs = ["auto"]
+# All macOS wheels are labelled macOS 11+ (which is Apple Silicon's minimum
+# anyway), so the OpenMP runtime we build below matches the wheel tag exactly.
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0", OpenMP_ROOT = "$HOME/frgfp-libomp" }
+# Homebrew's libomp is compiled for the runner's own macOS (a 26.x "tahoe" bottle
+# on the macOS 26 runners) and delocate refuses to bundle a library whose minimum
+# macOS is newer than the wheel's tag, so we build the runtime ourselves for the
+# deployment target above; see tools/ci/build_libomp.sh (it is cached between
+# jobs via actions/cache).
+before-all = "tools/ci/build_libomp.sh"
+# delocate has to find that runtime to bundle it, and macOS strips
+# DYLD_LIBRARY_PATH from the environment before delocate runs, so it is set inside
+# the repair command instead (the documented workaround for pypa/cibuildwheel#816).
+# Homebrew's kegs stay in the list as a fallback, and a failure is echoed as a
+# GitHub annotation so the real delocate error is visible directly on the pull
+# request instead of only in the (admin-only) job log.
+repair-wheel-command = """\
+log=$(mktemp); \
+if DYLD_LIBRARY_PATH=$HOME/frgfp-libomp/lib:/opt/homebrew/opt/libomp/lib:/usr/local/opt/libomp/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} >"$log" 2>&1; then \
+  cat "$log"; \
+else \
+  cat "$log"; \
+  echo "::error::delocate failed: $(tail -n 4 "$log" | tr '\\n' ' ')"; \
+  exit 1; \
+fi\
+"""
+# numba's OpenMP threading layer (selected in frgfp/lpa/_solver.py) needs an
+# OpenMP runtime at *run* time as well.  cibuildwheel 4.x has no option to set
+# test-only environment variables, so the workflows export
+# DYLD_FALLBACK_LIBRARY_PATH (our built prefix first, then the Homebrew kegs)
+# for the whole macOS job - see the "Provide an OpenMP runtime for the tests"
+# step in ci.yml / release.yml / wheel-debug.yml.
+
+[tool.cibuildwheel.windows]
+# `auto` would also build 32-bit Windows wheels, for which numba has no wheels.
+archs = ["AMD64"]
