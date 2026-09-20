@@ -229,47 +229,6 @@ jobs:
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
-  # The full benchmark suite runs once (it uses the large 1D/2D grids and is far
-  # slower than the correctness tests) and its JSON report joins the release
-  # artefacts.
-  # ---------------------------------------------------------------------------
-  benchmarks:
-    name: benchmarks
-    needs: [validate, wheels]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.validate.outputs.tag }}
-          fetch-depth: 0
-          fetch-tags: true
-
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
-      - name: Fetch the Linux wheel
-        uses: actions/download-artifact@v8
-        with:
-          name: wheel-cp312-linux-x86_64
-          path: dist
-
-      - name: Install the wheel and run the benchmarks
-        run: |
-          python -m pip install dist/*.whl
-          python -m pip install pytest pytest-benchmark
-          python -m pytest --pyargs frgfp -m benchmark -q \
-            --benchmark-json=benchmarks.json --benchmark-sort=name
-
-      - name: Upload the benchmark report
-        uses: actions/upload-artifact@v7
-        with:
-          name: benchmarks
-          path: benchmarks.json
-          if-no-files-found: error
-
-  # ---------------------------------------------------------------------------
   # Publish the documentation on GitHub Pages (SciPy-style version directories).
   #   * release candidate -> /<version>/ only, /latest/ is never touched
   #   * final release     -> /<version>/ and /latest/, and the switcher's
@@ -353,13 +312,12 @@ jobs:
             --branch gh-pages
 
   # ---------------------------------------------------------------------------
-  # GitHub release with every wheel, the sdist and the benchmark report attached.
-  # Pre-releases are marked as such so GitHub keeps showing the last *final*
-  # release as "Latest".
+  # GitHub release with every wheel and the sdist attached.  Pre-releases are
+  # marked as such so GitHub keeps showing the last *final* release as "Latest".
   # ---------------------------------------------------------------------------
   github-release:
     name: github release
-    needs: [validate, wheels, sdist, benchmarks]
+    needs: [validate, wheels, sdist]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -398,7 +356,10 @@ jobs:
   # stored in the repository (see RELEASING.md).
   # ---------------------------------------------------------------------------
   publish-pypi:
-    name: publish to ${{ inputs.target || 'pypi' }}
+    # A static name: `inputs.target` is not interpolated for tag-triggered runs,
+    # which used to leave the raw expression in the job list.  The two upload
+    # steps below are named "Publish to TestPyPI" / "Publish to PyPI".
+    name: publish (PyPI / TestPyPI)
     needs: [validate, wheels, sdist, docs, github-release]
     if: github.event_name == 'push' || inputs.publish
     runs-on: ubuntu-24.04
@@ -428,8 +389,8 @@ jobs:
       - name: Inspect the artefacts that will be uploaded
         run: |
           ls -l dist
-          # Only distributions may reach PyPI: the benchmark report and the docs
-          # must never end up in this directory.
+          # Only distributions may reach PyPI: the documentation tree and any
+          # other artefact must never end up in this directory.
           python - <<'PY'
           import glob
           import sys

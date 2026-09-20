@@ -39,7 +39,7 @@ the pipeline:
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `.github/workflows/ci.yml` | PR into `rc`/`main`, push to `rc`/`main` | Builds and tests a wheel for **every** supported platform × CPython combination (Linux x86_64 & aarch64, macOS Apple Silicon, Windows AMD64 × 3.10–3.14 — 20 wheels), builds the sdist and installs/tests it, builds the docs with `-W`. The single aggregate job **`ci`** is the status check to require in branch protection. |
-| `.github/workflows/release.yml` | tag `vX.Y.Z` / `vX.Y.ZrcN`, or manual dispatch | Validates the tag, builds/tests all wheels + sdist, runs the benchmark suite, publishes the docs to GitHub Pages, creates the GitHub release, and — after a human approves the `pypi` environment — uploads the wheels and sdist to PyPI. |
+| `.github/workflows/release.yml` | tag `vX.Y.Z` / `vX.Y.ZrcN`, or manual dispatch | Validates the tag, builds/tests all wheels + sdist, publishes the docs to GitHub Pages, creates the GitHub release, and — after a human approves the `pypi` environment — uploads the wheels and sdist to PyPI. |
 | `.github/workflows/docs-dev.yml` | push to `develop` | Publishes the development preview to `/dev/`. Delete this file if you do not want it. |
 | `.github/workflows/wheel-debug.yml` | manual | Builds and tests **one** wheel for a chosen runner/CPython using the same `pyproject.toml` configuration, so a problem can be iterated on in minutes without re-running the full matrix. It never posts the required `ci` check. |
 
@@ -50,9 +50,17 @@ installs the freshly built wheel into a clean virtual environment and runs
 python -m pytest --pyargs frgfp -m "not benchmark"
 ```
 
-from a temporary directory, so the *installed* wheel is what gets tested. The
-benchmark suite (the large 1D/2D grids) runs once per release on Linux and its
-JSON report is attached to the GitHub release.
+from a temporary directory, so the *installed* wheel is what gets tested.
+
+The 19 tests marked `benchmark` (the large 1D/2D grids, the O(8) order-100 case and
+the cold solver constructions) are **not part of any workflow**: they report timings
+that are only comparable on one machine, and the release pipeline must not depend on
+them. They still carry correctness assertions, so run them on demand before a
+release if you touched the solver or the large-grid paths:
+
+```bash
+python -m pytest --pyargs frgfp -m benchmark -q --benchmark-sort=name
+```
 
 Linux wheels are built in the `manylinux_2_28` image (AlmaLinux 8, GCC 14) and
 therefore require **glibc ≥ 2.28** (RHEL/Alma/Rocky 8+, Debian 10+, Ubuntu 18.10+).
