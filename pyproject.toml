@@ -7,12 +7,26 @@ name = "frgfp"
 dynamic = ["version"]
 description = "Functional Renormalization Group Fixed Point solver"
 readme = "README.md"
-requires-python = ">=3.8"
+# numba/llvmlite (the JIT layer of the solver) require Python >= 3.10 and only
+# ship cp310..cp314 wheels, so this is the real floor and the CI build matrix
+# (see [tool.cibuildwheel]) matches it exactly.
+requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.20.0", "numba>=0.55.0"
 ]
 
+[project.urls]
+Homepage = "https://github.com/molbarnabas/frgfp"
+Documentation = "https://molbarnabas.github.io/frgfp/latest/"
+Repository = "https://github.com/molbarnabas/frgfp"
+
 [project.optional-dependencies]
+# Runtime test dependencies; also used by cibuildwheel (test-extras), so the
+# wheels are tested with exactly the same plugin set as a local `pytest` run.
+test = [
+    "pytest>=7.0.0",
+    "pytest-benchmark",
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-benchmark",
@@ -32,3 +46,50 @@ build-dir = "build"
 provider = "scikit_build_core.metadata.setuptools_scm"
 
 [tool.setuptools_scm]
+
+# -- Testing -------------------------------------------------------------------
+[tool.pytest.ini_options]
+# A bare `pytest` from the repository root collects only the package tests;
+# pytest also accepts an explicit path or `--pyargs`, which is what cibuildwheel
+# uses to test an installed wheel from a temporary working directory.
+testpaths = ["frgfp"]
+addopts = "-ra"
+
+# -- Wheel building ------------------------------------------------------------
+# One build/test primitive for pull requests and releases: cibuildwheel builds
+# the wheel, installs it into a fresh virtual environment and runs the tests from
+# a temporary directory, so the *installed* wheel is always what gets tested.
+#
+# The tests live inside the `frgfp` package and ship with the wheel, hence
+# `--pyargs frgfp`.  Benchmarks are excluded here; the release workflow runs them
+# separately and archives their JSON as an artifact.
+[tool.cibuildwheel]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
+# 32-bit platforms have no numba wheels, and free-threaded builds are not a
+# supported numba target yet.
+skip = ["*-win32", "*-manylinux_i686", "*-musllinux_i686", "cp314t-*"]
+test-extras = ["test"]
+test-command = 'python -m pytest --pyargs frgfp -m "not benchmark" -q'
+
+[tool.cibuildwheel.linux]
+archs = ["auto64"]
+# The default manylinux2014 image ships GCC 10.2, which is too old to build the
+# current NumPy from source - and the test environment has to install a recent
+# NumPy/Numba.  manylinux_2_28 (AlmaLinux 8, GCC 14) is the modern baseline: the
+# resulting wheels need glibc >= 2.28 (RHEL/Alma/Rocky 8+, Debian 10+,
+# Ubuntu 18.10+).
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+
+[tool.cibuildwheel.macos]
+archs = ["auto"]
+# numba's OpenMP threading layer (selected in frgfp/lpa/_solver.py) needs an
+# OpenMP runtime at *run* time.  Homebrew's libomp is keg-only, so point the
+# dynamic loader at both possible keg prefixes (Apple Silicon and Intel); dyld
+# ignores the paths that do not exist.  CMake locates the keg by itself, see
+# CMakeLists.txt.
+test-environment = "DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:/usr/local/opt/libomp/lib:/usr/local/lib:/usr/lib"
+
+[tool.cibuildwheel.windows]
+# `auto` would also build 32-bit Windows wheels, for which numba has no wheels.
+archs = ["AMD64"]

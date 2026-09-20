@@ -1,5 +1,6 @@
 """Sphinx configuration for the frgfp documentation."""
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -66,12 +67,33 @@ html_title = f"{project} v{version} documentation"
 html_last_updated_fmt = "%b %d, %Y"
 html_context = {"default_mode": "light"}
 
+# -- Versioned documentation (GitHub Pages) ----------------------------------
+# The published site keeps one directory per release (SciPy style), with the
+# newest *final* release also available as /latest/.  The deploy step writes
+# switcher.json next to those directories, so json_url is an absolute URL on the
+# published site; a local build simply cannot load the switcher (see the note in
+# the pydata-sphinx-theme docs about the file:// protocol).
+DOC_BASE_URL = os.environ.get("DOC_BASE_URL", "https://molbarnabas.github.io/frgfp/")
+# Which entry of switcher.json is the one being browsed: "latest" for the
+# /latest/ alias, the version number for a pinned build, "dev" for a preview.
+# Must match the "version" field of that entry exactly.
+DOC_VERSION_MATCH = os.environ.get("DOC_VERSION_MATCH", version)
+
+html_baseurl = DOC_BASE_URL
+
 html_theme_options = {
     "github_url": "https://github.com/molbarnabas/frgfp",
     "collapse_navigation": True,
     "header_links_before_dropdown": 6,
+    "navbar_start": ["navbar-logo", "version-switcher"],
     "navbar_end": ["search-button", "theme-switcher", "navbar-icon-links"],
     "navbar_persistent": [],
+    "switcher": {
+        "json_url": f"{DOC_BASE_URL}switcher.json",
+        "version_match": DOC_VERSION_MATCH,
+    },
+    # The file above only exists on the published site.
+    "check_switcher": False,
 }
 
 # -- Options for autodoc -----------------------------------------------------

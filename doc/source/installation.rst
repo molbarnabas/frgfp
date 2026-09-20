@@ -7,16 +7,22 @@ compiled automatically by ``scikit-build-core`` during the build.
 Requirements
 ------------
 
-* Python >= 3.8
+* Python >= 3.10
 * NumPy and Numba
 * A C++ compiler with C++17 support
 * CMake >= 3.15
-* Eigen3 (header-only)
 * OpenMP
+* Eigen3 (header-only)
+
+Eigen3 and CMake are optional in practice: if Eigen3 is not installed the build
+fetches a pinned copy automatically (only CMake and a C++17 compiler are then
+required). OpenMP, on the other hand, is mandatory because the LPA backend calls
+the OpenMP runtime directly. On macOS install it with ``brew install libomp``;
+the build locates the Homebrew keg on its own.
 
 With conda, all of the build prerequisites above are provided by the
 ``environment.yml`` shipped in the repository. With plain ``pip`` you have to
-install CMake, a C++17 compiler and Eigen3 yourself.
+install CMake, a C++17 compiler and (optionally) Eigen3 yourself.
 
 Install with conda (recommended)
 --------------------------------
