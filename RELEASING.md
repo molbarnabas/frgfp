@@ -48,6 +48,15 @@ therefore require **glibc ≥ 2.28** (RHEL/Alma/Rocky 8+, Debian 10+, Ubuntu 18.
 The older `manylinux2014` image is not usable here: its GCC 10.2 cannot build the
 current NumPy, which the test environment has to install.
 
+macOS wheels are labelled **macOS 11+** and bundle their own OpenMP runtime: Homebrew's
+`libomp` is compiled for the runner's own macOS (a 26.x bottle on the macOS 26
+runners) and delocate refuses to bundle a library whose minimum macOS is newer than
+the wheel's tag. `tools/ci/build_libomp.sh` therefore builds LLVM's OpenMP runtime
+for the wheel's deployment target during `before-all` (mirroring Homebrew's own
+recipe, pinned by version and checksum) and the build links and bundles that copy.
+The result is cached between jobs, so the ~2 minute build happens once per runner
+and cache key.
+
 
 ## One-time setup
 
@@ -230,7 +239,8 @@ fixes it for the real matrix too.
 | `could not push to the documentation branch` (403) | *Settings → Actions → General → Workflow permissions* must be **Read and write permissions**; also check that no branch ruleset blocks `gh-pages`, and that the `--branch` name matches the Pages setting. |
 | Wheel version mismatch | The tag is not on the checked-out commit (`fetch-depth: 0` + `fetch-tags: true` matter), or a stale `build/` directory leaked into the build. |
 | macOS build fails on `omp.h` / `libomp` | `brew install libomp` — `CMakeLists.txt` locates the keg by itself, and the workflow installs it. |
-| macOS fails in `delocate-wheel` | delocate must locate Homebrew's `libomp`; `[tool.cibuildwheel.macos].repair-wheel-command` therefore sets `DYLD_LIBRARY_PATH` (SIP strips it from the environment, so it must be set inside the command — cibuildwheel #816). If the error is instead *"library dependencies do not satisfy target MacOS"*, the Homebrew library targets a newer macOS than the wheel: raise `MACOSX_DEPLOYMENT_TARGET` in `[tool.cibuildwheel.macos.environment]` (the wheel then requires that macOS version) or build OpenMP for the target. |
+| macOS fails in `delocate-wheel` | The repair command echoes delocate's error as a `::error::` annotation, so the message appears on the pull request. macOS labels the wheel macOS 11+ and `tools/ci/build_libomp.sh` builds the OpenMP runtime for exactly that target; if the annotation reports a *different* version, align `MACOSX_DEPLOYMENT_TARGET` in `[tool.cibuildwheel.macos].environment` with `FRGFP_LIBOMP_DEPLOYMENT_TARGET`. |
+| macOS `build_libomp.sh` fails | The script is cached and idempotent: delete `~/frgfp-libomp` and `~/frgfp-libomp-src` (or change `hashFiles('tools/ci/build_libomp.sh')` in the cache key) to force a rebuild; the LLVM tarball is checksum-verified, so a truncated download fails loudly. |
 | `pip install …musllinux…` fails / numba has no wheels | musllinux builds are skipped on purpose: numba publishes no musllinux wheels, so the test environment would have to compile llvmlite and LLVM. Do not remove `*-musllinux*` from `skip` without a full LLVM toolchain. |
 | Only some matrix cells fail, and the log is long | Use *Wheel debug (single target)* with the failing runner/CPython; it runs the same configuration in isolation. |
 | `No threading layer could be loaded` on macOS | numba needs an OpenMP runtime at run time; the macOS test environment already adds Homebrew's `libomp` to `DYLD_FALLBACK_LIBRARY_PATH`. |

@@ -85,22 +85,37 @@ manylinux-aarch64-image = "manylinux_2_28"
 
 [tool.cibuildwheel.macos]
 archs = ["auto"]
-# Homebrew's libomp is a dynamic library that our extension links against, so
-# delocate has to find it to bundle it into the wheel.  macOS strips
-# DYLD_LIBRARY_PATH from the environment before delocate runs, so it is set
-# inside the repair command instead (the documented workaround for
-# pypa/cibuildwheel#816).  Both possible keg prefixes are listed; delocate
-# ignores the ones that do not exist.
+# All macOS wheels are labelled macOS 11+ (which is Apple Silicon's minimum
+# anyway), so the OpenMP runtime we build below matches the wheel tag exactly.
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0", OpenMP_ROOT = "$HOME/frgfp-libomp" }
+# Homebrew's libomp is compiled for the runner's own macOS (a 26.x "tahoe" bottle
+# on the macOS 26 runners) and delocate refuses to bundle a library whose minimum
+# macOS is newer than the wheel's tag, so we build the runtime ourselves for the
+# deployment target above; see tools/ci/build_libomp.sh (it is cached between
+# jobs via actions/cache).
+before-all = "tools/ci/build_libomp.sh"
+# delocate has to find that runtime to bundle it, and macOS strips
+# DYLD_LIBRARY_PATH from the environment before delocate runs, so it is set inside
+# the repair command instead (the documented workaround for pypa/cibuildwheel#816).
+# Homebrew's kegs stay in the list as a fallback, and a failure is echoed as a
+# GitHub annotation so the real delocate error is visible directly on the pull
+# request instead of only in the (admin-only) job log.
 repair-wheel-command = """\
-DYLD_LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:/usr/local/opt/libomp/lib \
-delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}\
+log=$(mktemp); \
+if DYLD_LIBRARY_PATH=$HOME/frgfp-libomp/lib:/opt/homebrew/opt/libomp/lib:/usr/local/opt/libomp/lib delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel} >"$log" 2>&1; then \
+  cat "$log"; \
+else \
+  cat "$log"; \
+  echo "::error::delocate failed: $(tail -n 4 "$log" | tr '\\n' ' ')"; \
+  exit 1; \
+fi\
 """
 # numba's OpenMP threading layer (selected in frgfp/lpa/_solver.py) needs an
-# OpenMP runtime at *run* time.  Homebrew's libomp is keg-only, so point the
-# dynamic loader at both possible keg prefixes (Apple Silicon and Intel); dyld
-# ignores the paths that do not exist.  CMake locates the keg by itself, see
-# CMakeLists.txt.
-test-environment = "DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/libomp/lib:/usr/local/opt/libomp/lib:/usr/local/lib:/usr/lib"
+# OpenMP runtime at *run* time as well.  cibuildwheel 4.x has no option to set
+# test-only environment variables, so the workflows export
+# DYLD_FALLBACK_LIBRARY_PATH (our built prefix first, then the Homebrew kegs)
+# for the whole macOS job - see the "Provide an OpenMP runtime for the tests"
+# step in ci.yml / release.yml / wheel-debug.yml.
 
 [tool.cibuildwheel.windows]
 # `auto` would also build 32-bit Windows wheels, for which numba has no wheels.

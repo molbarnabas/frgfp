@@ -50,15 +50,22 @@ jobs:
       - name: Cache cibuildwheel's tool downloads
         uses: actions/cache@v6
         with:
-          path: ${{ env.CIBW_CACHE_PATH }}
-          key: cibw-debug-${{ inputs.os }}-${{ hashFiles('pyproject.toml') }}
+          path: |
+            ${{ env.CIBW_CACHE_PATH }}
+            ~/frgfp-libomp
+            ~/frgfp-libomp-tarball
+          key: cibw-debug-${{ inputs.os }}-${{ hashFiles('pyproject.toml', 'tools/ci/build_libomp.sh') }}
 
-      - name: Provide an OpenMP runtime (macOS)
+      - name: Provide an OpenMP runtime for the tests (macOS)
         if: runner.os == 'macOS'
         shell: bash
+        # The wheel bundles the libomp built by before-all, but numba's OpenMP
+        # threading layer resolves its own OpenMP runtime through the dynamic
+        # loader paths at *test* time.  cibuildwheel has no option for test-only
+        # environment variables, so the path is exported for the whole job.
         run: |
           brew list libomp >/dev/null 2>&1 || brew install libomp
-          echo "OpenMP_ROOT=$(brew --prefix libomp)" >> "$GITHUB_ENV"
+          echo "DYLD_FALLBACK_LIBRARY_PATH=$HOME/frgfp-libomp/lib:$(brew --prefix libomp)/lib:/usr/local/lib:/usr/lib" >> "$GITHUB_ENV"
 
       - name: Build the wheel and run pytest
         uses: pypa/cibuildwheel@v4.2.1

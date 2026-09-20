@@ -35,9 +35,21 @@ endif()
 # --- OpenMP -------------------------------------------------------------------
 # The LPA backend calls the OpenMP runtime directly (omp_in_parallel,
 # omp_get_thread_num, omp_get_max_threads in frgfp/lpa/src/_solver.cpp), so
-# OpenMP is a hard requirement.  AppleClang ships no OpenMP runtime, so on macOS
-# locate the Homebrew `libomp` keg instead of requiring the user to export flags
-# by hand (install it with `brew install libomp`).
+# OpenMP is a hard requirement.
+#
+# An externally supplied prefix wins: on macOS the wheel build compiles libomp
+# itself for the wheel's deployment target (tools/ci/build_libomp.sh) because
+# Homebrew's copy is built for the runner's macOS and delocate refuses to bundle
+# such a library into a macOS 11 wheel.  It is prepended to CMAKE_PREFIX_PATH so
+# that every CMake version honours it, not only those that understand
+# OpenMP_ROOT.
+if(DEFINED ENV{OpenMP_ROOT} AND EXISTS "$ENV{OpenMP_ROOT}")
+    message(STATUS "Using OpenMP from $ENV{OpenMP_ROOT}")
+    list(PREPEND CMAKE_PREFIX_PATH "$ENV{OpenMP_ROOT}")
+endif()
+
+# AppleClang ships no OpenMP runtime, so on macOS fall back to the Homebrew
+# `libomp` keg instead of demanding hand-set flags (`brew install libomp`).
 find_package(OpenMP QUIET)
 if(NOT OpenMP_CXX_FOUND AND APPLE)
     find_program(BREW_EXECUTABLE brew)
