@@ -23,6 +23,17 @@ develop ──► rc ──► main
 candidates get their own documentation directory and their own switcher entry
 (marked *pre-release*), but they never become `latest`.
 
+Promoting code between branches is part of the release flow, not a prerequisite of
+the pipeline:
+
+* release candidates are tagged on `rc` and need **no merge into `main`** — a tag
+  push runs `release.yml` from the tagged commit, even while the default branch
+  does not contain the workflow yet;
+* the final release is tagged on `main`, so `rc` **does** have to be merged into
+  `main` first; the tag guard refuses a final tag that is not reachable from
+  `origin/main`. That is also the merge which puts the workflows on the default
+  branch and thereby enables the manual *Run workflow* buttons.
+
 ## Workflows
 
 | Workflow | Trigger | What it does |
@@ -92,15 +103,26 @@ Windows, Linux x86_64, Linux aarch64 and macOS Apple Silicon remain fully built 
 tested. The platform table in `doc/source/installation.rst` is the user-facing
 version of this and must be kept in sync when the matrix changes.
 
-
 ## One-time setup
 
 ### 1. GitHub repository settings
 
-Do these **after** the pipeline has been merged into `main` (your default branch):
-GitHub only shows the *Run workflow* button for workflows that exist on the
-default branch, and the Pages branch dropdown only lists branches that already
-exist.
+These are needed **before the first tag**, and none of them requires a merge into
+`main`. What *does* depend on the default branch:
+
+* **Tag pushes run the workflow from the tagged commit**, whether or not that
+  commit is on the default branch (GitHub's `push` event explicitly covers
+  "workflows that are not merged into the default branch"). `rc` can therefore tag
+  and publish release candidates with the pipeline living only on `rc`.
+* The **Run workflow** button for `workflow_dispatch` workflows (Release, Wheel
+  debug, Docs preview) appears only once those files are on the default branch, so
+  manual re-runs and rehearsals start working after the first `rc` → `main`
+  merge.
+* The **final** `vX.Y.Z` tag must be reachable from `origin/main` — the tag guard
+  enforces that, which is why promoting `rc` → `main` is required *for the final
+  release only*.
+
+The settings themselves:
 
 * **Settings → Actions → General → Workflow permissions**: **Read and write
   permissions**. This is what allows the docs jobs to push `gh-pages` and the
@@ -117,24 +139,34 @@ exist.
 
 ### 2. First-time GitHub Pages setup
 
-`gh-pages` does not exist until the first documentation deployment creates it, so
-the Pages dropdown will only offer `main`/`develop`/`rc` at the beginning. The
-order is:
+`gh-pages` does not exist until the first documentation deployment creates it, and
+the Pages branch dropdown only lists branches that already exist. Two orders work;
+pick one:
 
-1. *Actions → **Docs preview (dev)** → Run workflow* — this is the cheapest way to
-   materialise the branch. It creates an orphan `gh-pages` branch (no source
-   files) containing `index.html`, `switcher.json`, `versions.json` and
-   `.nojekyll`, and publishes the `/dev/` preview. The site root redirects to
-   `/dev/` until the first final release exists.
+**A. Let the first release candidate create it (no merge, no extra step)**
+
+1. Push the first `vX.Y.ZrcN` tag (see *Cutting a release* below) — its docs job
+   creates the orphan `gh-pages` branch containing `index.html`, `switcher.json`,
+   `versions.json` and `.nojekyll`, and publishes `/X.Y.ZrcN/`.
 2. Refresh *Settings → Pages* → *Build and deployment* → Source: **Deploy from a
    branch**, branch **`gh-pages`**, folder **`/ (root)`**.
-3. Check <https://molbarnabas.github.io/frgfp/> — it should redirect to `/dev/`.
-   From now on every release adds its own directory and `/latest/` follows the
-   newest final release; the Pages settings never need touching again.
+3. Check <https://molbarnabas.github.io/frgfp/> — before any final release it
+   redirects to the release-candidate directory. From then on every release adds
+   its own directory and `/latest/` follows the newest final release; the Pages
+   settings never need touching again.
 
-If you would rather not publish a `/dev/` preview at all, create the branch from a
-throwaway clone instead (your working tree stays untouched) and let the first
-release fill it:
+**B. Bootstrap it with the development preview (before any tag)**
+
+*Push to `develop`* (no `main` involvement): `docs-dev.yml` triggers on pushes to
+`develop`, creates the branch the same way and publishes `/dev/`, so the site root
+redirects to `/dev/` until the first final release exists. Then do steps 2 and 3
+above.
+Alternatively, once the workflows are on the default branch, run *Actions → **Docs
+preview (dev)** → Run workflow* for the same effect without touching `develop` —
+remember that this button only exists after the first `rc` → `main` merge.
+
+If you prefer to keep the branch's history under your control, create it from a
+throwaway clone instead (your working tree stays untouched):
 
 ```bash
 git clone --no-checkout git@github.com:molbarnabas/frgfp.git /tmp/frgfp-pages
@@ -200,6 +232,8 @@ from an existing ref, so the published branch would contain the whole source tre
 git switch rc
 git merge --no-ff develop            # bring in the changes to be released
 git push
+# no merge into main is involved here: the tag push runs release.yml from the
+# tagged commit, even while the workflow exists only on rc
 git tag -a v0.2.0rc1 -m "0.2.0rc1"   # annotated tag; the message is free text
 git push origin v0.2.0rc1
 # -> builds and tests 20 wheels + the sdist, publishes /0.2.0rc1/ docs, creates a
@@ -207,8 +241,10 @@ git push origin v0.2.0rc1
 
 # ---------------------------------------------------------------- final release
 git switch main
-git merge --no-ff rc
-git push
+git merge --no-ff rc                 # required: a final tag must be reachable from
+git push                             # origin/main (the guard checks this), and
+                                     # this merge is what brings the workflows to
+                                     # the default branch
 git tag -a v0.2.0 -m "0.2.0"
 git push origin v0.2.0
 # -> same build/test run, docs also become /latest/, the GitHub release is marked
@@ -218,7 +254,11 @@ git push origin v0.2.0
 To rebuild an existing tag, or to do a dry run without publishing: *Actions →
 Release → Run workflow*, enter the tag, choose `target: testpypi` and leave
 `publish` off for a plain build (or turn it on to exercise the approval-gated
-TestPyPI upload).
+TestPyPI upload). That button only exists once the workflows are on the default
+branch, i.e. after the first `rc` → `main` merge. Until then, release candidates go
+straight from a tag — and if a publication is rejected, fix the publisher on PyPI
+and use *Re-run failed jobs*, which reuses the artefacts of that run instead of
+rebuilding them.
 
 ### Rules the pipeline enforces for you
 
@@ -282,7 +322,8 @@ fixes it for the real matrix too.
 | Only some matrix cells fail, and the log is long | Use *Wheel debug (single target)* with the failing runner/CPython; it runs the same configuration in isolation. |
 | `No threading layer could be loaded` on macOS | numba needs an OpenMP runtime at run time; the macOS test environment already adds Homebrew's `libomp` to `DYLD_FALLBACK_LIBRARY_PATH`. |
 | `/latest/` did not update | The tag was a release candidate, or it is older than the recorded `latest` (see the warning in the docs job log). |
-| `gh-pages` is missing from the Pages branch dropdown | It does not exist yet — see *First-time GitHub Pages setup* above; the first docs deployment creates it. |
-| The *Run workflow* button is missing for Release / Docs preview | `workflow_dispatch` only lists workflows that exist on the **default branch** (`main`); merge the pipeline there first. |
+| `gh-pages` is missing from the Pages branch dropdown | It does not exist yet — see *First-time GitHub Pages setup* above; the first docs deployment creates it (a tag run does that without touching `main`). |
+| The *Run workflow* button is missing for Release / Docs preview | `workflow_dispatch` only lists workflows that exist on the **default branch** (`main`); tag-driven releases still work without that merge, and the buttons appear after the first `rc` → `main` promotion. |
+| The publish job did not wait for approval | The `pypi`/`testpypi` environment referenced by the workflow did not exist yet, so GitHub created it *without* protection rules. Create it under *Settings → Environments* with yourself as a required reviewer, then re-run the job. |
 | The PyPI publish step is skipped | It waits for the `pypi`/`testpypi` environment approval (add yourself as a required reviewer), and it only runs after the wheels, sdist, docs and GitHub release all succeeded. If the docs deploy failed, fix it and use *Re-run failed jobs*. |
 
